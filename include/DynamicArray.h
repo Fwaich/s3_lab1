@@ -2,16 +2,18 @@
 #include <iostream>
 #include "exceptions.h"
 
-using namespace std;
-
 template <typename T>
 class DynamicArray 
 {
 private:    
     T* data;
     int size;
-public:
+    int capacity;
 
+private:
+    void reallocate(int new_capacity);
+
+public:
     DynamicArray();
     DynamicArray(int size_value);
     DynamicArray(T* items, int count);
@@ -26,34 +28,60 @@ public:
 };
 
 template <typename T>
-DynamicArray<T>::DynamicArray(): data(nullptr), size(0) {};
+DynamicArray<T>::DynamicArray(): data(nullptr), size(0), capacity(0) {};
 
 template <typename T>
-DynamicArray<T>::DynamicArray(int size_value){
+DynamicArray<T>::DynamicArray(int size_value) {
     size = size_value;
-    data = new T[size];
+    capacity = size;
+    data = new T[capacity];
+    
+    for (int i = 0; i < size; i++) {
+        data[i] = T();
+    }
 };
 
 template <typename T>
-DynamicArray<T>::DynamicArray(T* items, int count){
+DynamicArray<T>::DynamicArray(T* items, int count) {
     size = count;
-    data = new T[size];
-    for (int i = 0; i < size; i++){
+    capacity = size;
+    data = new T[capacity];
+    for (int i = 0; i < size; i++) {
         data[i] = items[i];
     }
 };
 
 template <typename T>
-DynamicArray<T>::~DynamicArray(){
+DynamicArray<T>::~DynamicArray() {
     delete[] data;
 };
 
 template <typename T>
+void DynamicArray<T>::reallocate(int new_capacity) {
+    T* tmp_data = new T[new_capacity];
+    
+    int elements_to_copy = (size < new_capacity) ? size : new_capacity;
+    for (int i = 0; i < elements_to_copy; i++) {
+        tmp_data[i] = data[i];
+    }
+    
+    for (int i = elements_to_copy; i < new_capacity; i++) {
+        tmp_data[i] = T();
+    }
+
+    delete[] data;
+    data = tmp_data;
+    capacity = new_capacity;
+    
+    if (new_capacity < size) {
+        size = new_capacity;
+    }
+}
+
+template <typename T>
 T DynamicArray<T>::get(int index) const {
     if (index >= size || index < 0) throw array_out_of_range();
-
     return data[index];
-
 }
 
 template <typename T>
@@ -62,39 +90,44 @@ int DynamicArray<T>::get_size() const {
 };
 
 template <typename T>
-void DynamicArray<T>::set(int index, T value){
-    if (index >= size || index < 0)  throw array_out_of_range();
-
+void DynamicArray<T>::set(int index, T value) {
+    if (index >= size || index < 0) throw array_out_of_range();
     data[index] = value; 
-
 };
 
 template <typename T>
-void DynamicArray<T>::resize(int new_size){
-    if (new_size < 0){
-        throw invalid_argument("Array: New size must be non-negative");
-        return;
+void DynamicArray<T>::resize(int new_size) {
+    if (new_size < 0) {
+        throw std::invalid_argument("Array: New size must be non-negative");
     }
     
-    T* tmp_data = new T[new_size];
-    int size_to_copy = (new_size > size) ? size : new_size;
-    for (int i = 0; i < new_size; i++){
-        tmp_data[i] = (i < size_to_copy) ? data[i] : T();
-    } 
-
-    delete[] data;
-    data = tmp_data;
-    size = new_size; 
+    if (new_size > capacity) {
+        int new_capacity;
+        if (capacity == 0) {
+            new_capacity = (new_size > 1) ? new_size : 1; 
+        } else {
+            new_capacity = (capacity * 2 > new_size) ? capacity * 2 : new_size;
+        }
+        reallocate(new_capacity);
+    }
+    
+    if (new_size > size) {
+        for (int i = size; i < new_size; i++) {
+            data[i] = T();
+        }
+    }
+    
+    size = new_size;
 };
 
 template <typename T>
-void DynamicArray<T>::print(){
-    if (size == 0){
-        cout << "Empty" << endl;
+void DynamicArray<T>::print() {
+    if (size == 0) {
+        std::cout << "Empty" << std::endl;
         return;
     }
 
-    for (int i = 0; i < size; i++){
-        cout << "[" << i << "]: " << data[i] << endl;
+    for (int i = 0; i < size; i++) {
+        std::cout << "[" << i << "]: " << data[i] << std::endl;
     }
 }
