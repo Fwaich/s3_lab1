@@ -1,7 +1,7 @@
-#include "exceptions.h"
+#include "exceptions.hpp"
 
-const char* array_out_of_range::what() const noexcept{
-    return "index out of array";
+const char* out_of_range::what() const noexcept{
+    return "index out of data";
 }
 
 const char* data_is_null::what() const noexcept{

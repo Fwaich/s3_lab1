@@ -2,7 +2,7 @@
 #include <exception>
 
 
-class array_out_of_range : public std::exception {
+class out_of_range : public std::exception {
 public:
     virtual const char* what() const noexcept override;
 };

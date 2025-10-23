@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#include "exceptions.h"
+#include "exceptions.hpp"
 
 template <typename T>
 class DynamicArray 
@@ -80,7 +80,7 @@ void DynamicArray<T>::reallocate(int new_capacity) {
 
 template <typename T>
 T DynamicArray<T>::get(int index) const {
-    if (index >= size || index < 0) throw array_out_of_range();
+    if (index >= size || index < 0) throw out_of_range();
     return data[index];
 }
 
@@ -91,7 +91,7 @@ int DynamicArray<T>::get_size() const {
 
 template <typename T>
 void DynamicArray<T>::set(int index, T value) {
-    if (index >= size || index < 0) throw array_out_of_range();
+    if (index >= size || index < 0) throw out_of_range();
     data[index] = value; 
 };
 

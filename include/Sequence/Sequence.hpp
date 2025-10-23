@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <functional>
 
 template <typename T>
 class Sequence
@@ -16,7 +17,7 @@ public:
     virtual T get_last() const = 0;
     virtual int get_size() const = 0;
     virtual Sequence<T>* get_subsequence(int start_index, int end_index) const = 0;
-    virtual Sequence<T>* map(double multiplier) = 0;
+    virtual Sequence<T>* map(std::function<T(T)> func) = 0;
 
     virtual std::string to_string() const = 0;
 };

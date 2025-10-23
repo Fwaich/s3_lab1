@@ -2,9 +2,9 @@
 #include <type_traits>
 #include <sstream>
 #include <iomanip>
-#include "DynamicArray.h"
-#include "Sequence.h"
-#include "exceptions.h"
+#include "DynamicArray.hpp"
+#include "Sequence.hpp"
+#include "exceptions.hpp"
 
 template <typename T>
 class ArraySequence : public Sequence<T>
@@ -15,7 +15,7 @@ public:
 
     ArraySequence();
     ArraySequence(T* arr, int count);
-    ArraySequence( Sequence<T>& seq);
+    ArraySequence( ArraySequence<T>& seq);
     ~ArraySequence() override;
 
     ArraySequence<T>* append(T item) override;
@@ -46,11 +46,11 @@ ArraySequence<T>::ArraySequence(T* arr, int count){
 }
 
 template <typename T>
-ArraySequence<T>::ArraySequence( Sequence<T>& seq){
+ArraySequence<T>::ArraySequence(ArraySequence<T>& seq){
     items = new DynamicArray<T>(seq.get_size());
 
-    for (int i = 0; i < items->get_size(); i++){
-        set(i, seq.get(i));
+    for (int i = 0; i < seq.get_size(); i++){
+        items->set(i, seq.get(i));
     }
 }
 
@@ -102,14 +102,14 @@ int ArraySequence<T>::get_size() const {
 
 template <typename T>
 T ArraySequence<T>::get_first() const {
-    if (items->get_size() == 0) throw array_out_of_range();
+    if (items->get_size() == 0) throw out_of_range();
     return items->get(0);
 }
 
 template <typename T>
 T ArraySequence<T>::get_last() const {
     int size_of_array = items->get_size();
-    if (size_of_array == 0) throw array_out_of_range();
+    if (size_of_array == 0) throw out_of_range();
     return items->get(size_of_array - 1);
 }
 
@@ -120,7 +120,7 @@ ArraySequence<T>* ArraySequence<T>::get_subsequence(int start_index, int end_ind
 
     if (start_index < 0 || start_index >= items->get_size() ||
         end_index < 0 || end_index >= items->get_size()) {
-        throw array_out_of_range();
+        throw out_of_range();
     }
 
     if (start_index > end_index){
