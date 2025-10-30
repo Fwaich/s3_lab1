@@ -4,48 +4,47 @@
 #include <iostream>
 #include <memory>
 
+auto fib = [](Sequence<long long>* seq) -> long long {
+    size_t size = seq->get_size();
+    return seq->get(size - 1) + seq->get(size - 2);
+};
+
+void test_copy_sequence() {
+    Sequence<int>* a = new ArraySequence<int>;
+    for (int i = 0; i < 100; ++i) {
+        a->append(i);
+    } 
+
+    VectorSequence<int> vec(a);
+    
+
+    delete a;
+}
+
+void test_lazy_seq() {
+    Sequence<long long>* a = new VectorSequence<long long>;
+    for (int i = 0; i < 2; ++i) {
+        a->append(i);
+    }
+
+    LazySequence<long long> l(a, 2, fib);
+
+    for (int i = 0; i < 1000000; i++) {
+        long long item = l.get(i);
+    }
+    
+}
+
+
+
+
 
 int main() {
     try {
 
-        UniquePtr<Sequence<int>> vec(new VectorSequence<int>());
-        // VectorSequence<int> vec;
-        // std::unique_ptr<Sequence<int>> vec = std::make_unique<VectorSequence<int>>(VectorSequence<int>());
-
-        for (int i = 0; i < 120; i++) {
-            vec->append(i);
-        } 
-        std::cout << vec->to_string() << std::endl;
-
-        // ArraySequence<int> a;
-        
-        // for (int i = 0; i < 120; i++) {
-        //     a.append(i);
-        // }
-        // ArraySequence<int> b(a);
-
-        // for (int i = 0; i < 10; i++) {
-        //     std::cout << b.get(i) << std::endl;
-        // }
-
-        // std::cout << b.to_string() << std::endl; 
-        
-        ReadOnlyStream<int> stream(vec.release());
-        while (!stream.is_end_off_stream()) {
-            std::cout << stream.read() << std::endl;  
-        }
-        std::cout << "End of stream" << std::endl;
-
-        // std::cout << a.to_string() << std::endl; 
-        // std::cout << a.get_size() << std::endl; 
-    
-        int arr_int[] = {1, 2, 3, 4, 5};
-        VectorSequence<int> a(arr_int, 5);
-
-        for (int i = 0; i < 100; ++i)
-            a.append(i);
-
-        std::cout << a.to_string() << std::endl;
+        // test_copy_sequence();
+        // test_operator();
+        test_lazy_seq();
 
     } catch(const out_of_range& e){
         std::cout << e.what() << std::endl; 

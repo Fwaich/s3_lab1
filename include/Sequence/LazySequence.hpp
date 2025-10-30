@@ -1,29 +1,43 @@
 #pragma once
 
 #include "Generator.hpp"
-#include<iostream> 
-#include<functional> 
-#include<vector>
+#include "Sequence.hpp"
+#include "VectorSequence.hpp"
+#include <iostream> 
+#include <functional> 
 
 template <typename T>
-class LazySequnce 
+class LazySequence 
 {
 private:
-    Generator<T> generator;
-    std::vector<T> cache;
+    Generator<T>* generator;
+    Sequence<T>* cache;
+
 public:
+    
+    LazySequence(Sequence<T>*  seq, size_t arity, std::function<T(Sequence<T>*)> rule){
+        cache = seq;
+        generator = new Generator<T>(this, arity, rule);
+    }
 
-    LazySequnce(std::function<T(int)> rule) : generator(rule) {};
+    ~LazySequence() {
+        delete cache;
+        delete generator;
+    }
 
-    void PrintFirstN(int n) {
-        int index = 1;
-        while (cache.size() <= n) {
-            cache.push_back(generator.Get(index));
-            
-            std::cout << cache[index - 1] << ' ';
-            index++;
+    T get(int index) {
+        while (cache->get_size() <= index) {
+            cache->append(generator->get_next());
         }
-        std::cout << std::endl;
+        return cache->get(index);
+    }
+
+    size_t get_materialized_count() {
+        return cache->get_size();
+    }
+
+    std::string to_string() {
+        return cache->to_string();
     }
 
 };

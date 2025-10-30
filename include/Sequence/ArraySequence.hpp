@@ -29,7 +29,7 @@ public:
 
     ArraySequence<T>* get_subsequence(int start_index, int end_index) const override;
 
-    ArraySequence<T>* map(double multiplier) override;
+    ArraySequence<T>* map(std::function<T(T)> func) override;
 
     std::string to_string() const override;
 
@@ -143,20 +143,7 @@ ArraySequence<T>* ArraySequence<T>::get_subsequence(int start_index, int end_ind
 }
 
 template <typename T>
-ArraySequence<T>* ArraySequence<T>::map(double multiplier) {
-    if (get_size() == 0) throw data_is_null();
-
-    for (int i = 0; i < items->get_size(); ++i) {
-        T value = items->get(i);
-        if constexpr (std::is_same_v<T, std::string>) {
-            for (char& c : value) {
-                c = std::toupper(static_cast<unsigned char>(c));
-            }
-            items->set(i, value);
-        } else {
-            items->set(i, value * multiplier);
-        }
-    }
+ArraySequence<T>* ArraySequence<T>::map(std::function<T(T)> func) {
     return this;
 }
 

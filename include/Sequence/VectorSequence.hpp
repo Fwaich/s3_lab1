@@ -20,6 +20,12 @@ public:
 
     VectorSequence(const VectorSequence<T>& other) : vector(other.vector) {}
 
+    VectorSequence(const Sequence<T>* seq) : vector(seq->get_size()) {
+        for (int i = 0; i < seq->get_size(); ++i) {
+            vector.set(i, seq->get(i));
+        }
+    }
+
     ~VectorSequence() override = default;
 
     VectorSequence<T>* append(T item) override {
