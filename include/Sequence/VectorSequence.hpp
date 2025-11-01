@@ -72,7 +72,7 @@ public:
             throw std::out_of_range("Invalid subsequence range");
 
         int sub_size = end_index - start_index + 1;
-        VectorSequence<T>* sub = new VectorSequence<T>(sub_size);
+        VectorSequence<T>* sub = new VectorSequence<T>;
 
         for (int i = start_index; i < end_index + 1; ++i) {
             T item = vector.get(i);
@@ -87,7 +87,7 @@ public:
 
         for (int i = 0; i < vector.get_size(); ++i){
             T mapped_item = func(vector.get(i));
-            mapped_vector->append(mapped_item);
+            mapped_vector->set(i, mapped_item);
         }
 
         return mapped_vector;

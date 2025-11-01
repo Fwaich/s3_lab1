@@ -35,7 +35,7 @@ public:
     size_t get_materialized_count() {
         return cache->get_size();
     }
-
+    
     std::string to_string() {
         return cache->to_string();
     }
