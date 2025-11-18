@@ -7,11 +7,11 @@ class Sequence
 {
 public:
 
-    virtual ~Sequence() = 0;
+    virtual ~Sequence() =  default;
 
-    virtual Sequence<T>* append(T item) = 0;
-    virtual Sequence<T>* prepend(T item) = 0;
-    virtual Sequence<T>* set(int index, T item) = 0;
+    virtual Sequence<T>* append(const T& item) = 0;
+    virtual Sequence<T>* prepend(const T& item) = 0;
+    virtual Sequence<T>* set(int index, const T& item) = 0;
     virtual T get(int index) const = 0;
     virtual T get_first() const = 0;
     virtual T get_last() const = 0;
@@ -22,5 +22,5 @@ public:
     virtual std::string to_string() const = 0;
 };
 
-template <typename T>
-Sequence<T>::~Sequence() {}
+// template <typename T>
+// Sequence<T>::~Sequence() {}

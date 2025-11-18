@@ -18,9 +18,9 @@ public:
     ArraySequence( ArraySequence<T>& seq);
     ~ArraySequence() override;
 
-    ArraySequence<T>* append(T item) override;
-    ArraySequence<T>* prepend(T item) override;
-    ArraySequence<T>* set(int index, T item) override;
+    ArraySequence<T>* append(const T& item) override;
+    ArraySequence<T>* prepend(const T& item) override;
+    ArraySequence<T>* set(int index, const T& item) override;
 
     T get(int index) const override;
     T get_first() const override;
@@ -60,7 +60,7 @@ ArraySequence<T>::~ArraySequence(){
 }
 
 template <typename T>
-ArraySequence<T>* ArraySequence<T>::append(T item){
+ArraySequence<T>* ArraySequence<T>::append(const T& item){
     int new_size = items->get_size() + 1;
     items->resize(new_size);
 
@@ -70,7 +70,7 @@ ArraySequence<T>* ArraySequence<T>::append(T item){
 }
 
 template <typename T>
-ArraySequence<T>* ArraySequence<T>::prepend(T item){
+ArraySequence<T>* ArraySequence<T>::prepend(const T& item){
     int new_size = items->get_size() + 1;
     items->resize(new_size);
 
@@ -84,7 +84,7 @@ ArraySequence<T>* ArraySequence<T>::prepend(T item){
 }
 
 template <typename T>
-ArraySequence<T>* ArraySequence<T>::set(int index, T item){
+ArraySequence<T>* ArraySequence<T>::set(int index, const T& item){
     items->set(index, item);
 
     return this;

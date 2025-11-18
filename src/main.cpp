@@ -5,6 +5,11 @@
 #include <iostream>
 #include <memory>
 
+
+auto double_it = [](int index) -> int {
+    return index * 2;
+};
+
 auto fib = [](Sequence<long long>* seq) -> long long {
     size_t size = seq->get_size();
     return seq->get(size - 1) + seq->get(size - 2);
@@ -37,11 +42,29 @@ void test_lazy_seq() {
 
     LazySequence<long long> l(a, 2, fib1);
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i <= 10; i++) {
         long long item = l.get(i);
+        std::cout << item << std::endl;
     }
-    
-    // std::cout << item << std::endl;
+
+    // LazySequence<long long> l(a, double_it);
+
+    // for (int i = 0; i <= 10; i++) {
+    //     long long item = l.get(i);
+    //     std::cout << item << std::endl;
+    // }
+
+    // std::cout << l.get(1) << std::endl;
+
+    auto sub = l.get_subsequence(5, 10);
+    std::cout << sub->to_string() << std::endl;
+
+    for (int i = 0; i < 20; i++) {
+        long long item = sub->get(i);
+        std::cout << item << std::endl;
+    }
+
+    delete sub;
     
 }
 
@@ -52,7 +75,8 @@ void test_cardinal() {
         std::cout << val.get_value() << std::endl;
     }
 
-    std::cout << val << std::endl;
+    // std::cout << val << std::endl;
+    
 }
 
 
@@ -64,8 +88,8 @@ int main() {
 
         // test_copy_sequence();
         // test_operator();
-        // test_lazy_seq();
-        test_cardinal();
+        test_lazy_seq();
+        // test_cardinal();
 
     } catch(const out_of_range& e){
         std::cout << e.what() << std::endl; 

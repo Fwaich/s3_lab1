@@ -28,17 +28,17 @@ public:
 
     ~VectorSequence() override = default;
 
-    VectorSequence<T>* append(T item) override {
+    VectorSequence<T>* append(const T& item) override {
         vector.push_back(item);
         return this;
     }
 
-    VectorSequence<T>* prepend(T item) override {
+    VectorSequence<T>* prepend(const T& item) override {
         vector.push_front(item);
         return this;
     }
 
-    VectorSequence<T>* set(int index, T item) override {
+    VectorSequence<T>* set(int index, const T& item) override {
         vector.set(index, item);
         return this;
     }
