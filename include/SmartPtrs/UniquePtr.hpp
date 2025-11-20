@@ -1,22 +1,22 @@
 #pragma once
 
 template<class T>
-class UniquePtr 
+class Unique_Ptr 
 {
 private:
     T* ptr_;
 
 public:
-    explicit UniquePtr(T* ptr = nullptr) noexcept : ptr_(ptr) {};
+    explicit Unique_Ptr(T* ptr = nullptr) noexcept : ptr_(ptr) {};
 
-    UniquePtr(const UniquePtr&) = delete;
-    UniquePtr& operator=(const UniquePtr&) = delete;
+    Unique_Ptr(const Unique_Ptr&) = delete;
+    Unique_Ptr& operator=(const Unique_Ptr&) = delete;
 
-    UniquePtr(UniquePtr&& other) noexcept : ptr_(other.ptr_) {
+    Unique_Ptr(Unique_Ptr&& other) noexcept : ptr_(other.ptr_) {
         other.ptr_ = nullptr;
     }
 
-    ~UniquePtr() {
+    ~Unique_Ptr() {
         delete ptr_;
     }
 
@@ -37,7 +37,7 @@ public:
         ptr_ = ptr;
     }
 
-    void swap(UniquePtr& other) noexcept {
+    void swap(Unique_Ptr& other) noexcept {
         T* temp = ptr_;
         ptr_ = other.ptr_;
         other.ptr_ = temp;
@@ -58,22 +58,22 @@ public:
 };
 
 template<class T>
-class UniquePtr<T[]> 
+class Unique_Ptr<T[]> 
 {
 private:
     T* ptr_;
 
 public:
-    explicit UniquePtr(T* ptr = nullptr) noexcept : ptr_(ptr) {};
+    explicit Unique_Ptr(T* ptr = nullptr) noexcept : ptr_(ptr) {};
 
-    UniquePtr(const UniquePtr&) = delete;
-    UniquePtr& operator=(const UniquePtr&) = delete;
+    Unique_Ptr(const Unique_Ptr&) = delete;
+    Unique_Ptr& operator=(const Unique_Ptr&) = delete;
 
-    UniquePtr(UniquePtr&& other) noexcept : ptr_(other.ptr_) {
+    Unique_Ptr(Unique_Ptr&& other) noexcept : ptr_(other.ptr_) {
         other.ptr_ = nullptr;
     }
 
-    ~UniquePtr() {
+    ~Unique_Ptr() {
         delete[] ptr_;
     }
     
@@ -94,13 +94,13 @@ public:
         ptr_ = ptr;
     }
     
-    void swap(UniquePtr& other) noexcept {
+    void swap(Unique_Ptr& other) noexcept {
         T* temp = ptr_;
         ptr_ = other.ptr_;
         other.ptr_ = temp;
     }
 
-    UniquePtr& operator=(UniquePtr&& other) noexcept {
+    Unique_Ptr& operator=(Unique_Ptr&& other) noexcept {
         if (this != &other) {
             reset(other.ptr_);
             other.ptr_ = nullptr;
@@ -117,3 +117,13 @@ public:
         return ptr_ != nullptr;
     }
 };
+
+template<typename T, typename... Args>
+Unique_Ptr<T> make_unique(Args&&... args) {
+    return Unique_Ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+template<typename T>
+Unique_Ptr<T[]> make_unique(size_t size) {
+    return Unique_Ptr<T[]>(new T[size]());
+}

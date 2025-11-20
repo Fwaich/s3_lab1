@@ -47,7 +47,7 @@ public:
     }
 
     ~Vector() {
-        delete[] data;
+        if (data) delete[] data;
     }
 
     void push_back(const T& value) {
@@ -81,4 +81,11 @@ public:
         return size; 
     }
 
+    void reset() {
+        if (!data) return;
+        delete[] data;
+        data = nullptr;
+        size = 0;
+        capacity = 0;
+    }
 };

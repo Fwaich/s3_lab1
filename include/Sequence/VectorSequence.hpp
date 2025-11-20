@@ -6,39 +6,39 @@
 #include "Vector.hpp"
 
 template <typename T>
-class VectorSequence : public Sequence<T>
+class Vector_Sequence : public Sequence<T>
 {
 private:
     Vector<T> vector;
 
 public:
-    VectorSequence() = default;
+    Vector_Sequence() = default;
 
-    VectorSequence(int initial_size) : vector(initial_size) {} 
+    Vector_Sequence(int initial_size) : vector(initial_size) {} 
 
-    VectorSequence(const T* arr, int count) : vector(arr, count) {}
+    Vector_Sequence(const T* arr, int count) : vector(arr, count) {}
 
-    VectorSequence(const VectorSequence<T>& other) : vector(other.vector) {}
+    Vector_Sequence(const Vector_Sequence<T>& other) : vector(other.vector) {}
 
-    VectorSequence(const Sequence<T>* seq) : vector(seq->get_size()) {
+    Vector_Sequence(const Sequence<T>* seq) : vector(seq->get_size()) {
         for (int i = 0; i < seq->get_size(); ++i) {
             vector.set(i, seq->get(i));
         }
     }
 
-    ~VectorSequence() override = default;
+    ~Vector_Sequence() override = default;
 
-    VectorSequence<T>* append(const T& item) override {
+    Vector_Sequence<T>* append(const T& item) override {
         vector.push_back(item);
         return this;
     }
 
-    VectorSequence<T>* prepend(const T& item) override {
+    Vector_Sequence<T>* prepend(const T& item) override {
         vector.push_front(item);
         return this;
     }
 
-    VectorSequence<T>* set(int index, const T& item) override {
+    Vector_Sequence<T>* set(int index, const T& item) override {
         vector.set(index, item);
         return this;
     }
@@ -64,7 +64,7 @@ public:
         return vector.get_size();
     }
 
-    VectorSequence<T>* get_subsequence(int start_index, int end_index) const override {
+    Vector_Sequence<T>* get_subsequence(int start_index, int end_index) const override {
         if (vector.get_size() == 0)
             throw std::runtime_error("Sequence is empty");
 
@@ -72,7 +72,7 @@ public:
             throw std::out_of_range("Invalid subsequence range");
 
         int sub_size = end_index - start_index + 1;
-        VectorSequence<T>* sub = new VectorSequence<T>;
+        Vector_Sequence<T>* sub = new Vector_Sequence<T>;
 
         for (int i = start_index; i < end_index + 1; ++i) {
             T item = vector.get(i);
@@ -82,8 +82,8 @@ public:
         return sub;
     }
 
-    VectorSequence<T>* map(std::function<T(T)> func ) override {
-        VectorSequence<T>* mapped_vector = new VectorSequence<T>(vector.get_size());
+    Vector_Sequence<T>* map(std::function<T(T)> func ) override {
+        Vector_Sequence<T>* mapped_vector = new Vector_Sequence<T>(vector.get_size());
 
         for (int i = 0; i < vector.get_size(); ++i){
             T mapped_item = func(vector.get(i));
@@ -91,6 +91,12 @@ public:
         }
 
         return mapped_vector;
+    }
+
+    Vector_Sequence<T>* reset() override {
+        vector.reset();
+
+        return this;
     }
 
     std::string to_string() const override {

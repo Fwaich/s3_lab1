@@ -4,41 +4,40 @@
 #include "Sequence.hpp"
 #include "VectorSequence.hpp"
 #include "Cardinal.hpp"
+#include "UniquePtr.hpp"
 #include <functional> 
 
 template <typename T>
-class LazySequence 
+class Lazy_Sequence 
 {
 private:
     Generator<T>* generator;
     Sequence<T>* seq;
 
 public:
-    
-    LazySequence(Sequence<T>*  seq, std::function<T(int)> rule){
+
+    Lazy_Sequence(Sequence<T>*  seq, size_t arity, std::function<T(Sequence<T>*)> rule){
         this->seq = seq;
-        this->generator = new Index_Generator<T>(this, seq->get_size(), rule);
+        this->generator = new Function_Generator<T>(this, arity, rule);
     }
 
-    LazySequence(Sequence<T>*  seq, size_t arity, std::function<T(Sequence<T>*)> rule){
+    Lazy_Sequence(Sequence<T>* seq, Generator<T>* gen) {
         this->seq = seq;
-        this->generator = new Sequence_Generator<T>(this, arity, rule);
+        this->generator = gen;
     }
 
-    LazySequence(Sequence<T>*  seq){
-        this->seq = seq;
-        this->generator = nullptr;
+    Lazy_Sequence(Sequence<T>*  seq){
+        this->seq = new Vector_Sequence<T>; //  будет заполнять из статика в seq lazy_sequence'a
+        this->generator = new Sequence_Generator(seq);
     }
 
-    ~LazySequence() {
+    ~Lazy_Sequence() {
         delete seq;
         delete generator;
     }
 
     T get(int index) {
-        if (!generator) return seq->get(index);
-
-        while (seq->get_size() <= index) {
+        while (generator->has_next() && seq->get_size() <= index) {
             seq->append(generator->get_next());
         }
         return seq->get(index);
@@ -52,16 +51,35 @@ public:
         return seq->get_last();
     }
 
-    LazySequence<T>* get_subsequence(int start_index, int end_index) {
-        LazySequence<T>* sub_lazy_seq = new LazySequence<T>(seq->get_subsequence(start_index, end_index));
-        if (!this->generator) return sub_lazy_seq;
-
-        sub_lazy_seq->generator = this->generator->clone(sub_lazy_seq);
-        return sub_lazy_seq;
+    bool has_next() {
+        return generator->has_next();
     }
 
-    LazySequence<T>* append(T item) {
-        
+    // Lazy_Sequence<T>* get_subsequence(int start_index, int end_index) {
+    //     Lazy_Sequence<T>* sub_lazy_seq = new Lazy_Sequence<T>(
+    //         seq->get_subsequence(start_index, end_index),
+    //         generator->clone(sub_lazy_seq)
+    //     );
+
+    //     return sub_lazy_seq;
+    // }
+
+    Lazy_Sequence<T>* append(Sequence<T>* items) {
+        this->seq->reset();
+        Generator<T>* end_generator = new Sequence_Generator<T>(items);
+        Generator<T>* append_generator = new Concat_Generator(this->generator, end_generator);
+        this->generator = append_generator;
+
+        return this;
+    }
+
+    Lazy_Sequence<T>* prepend(Sequence<T>* items) {
+        this->seq->reset();
+        Generator<T>* start_generator = new Sequence_Generator<T>(items);
+        Generator<T>* prepend_generator = new Concat_Generator(start_generator, this->generator);
+        this->generator = prepend_generator;
+
+        return this;
     }
 
     size_t get_materialized_count() {

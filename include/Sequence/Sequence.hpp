@@ -18,6 +18,7 @@ public:
     virtual int get_size() const = 0;
     virtual Sequence<T>* get_subsequence(int start_index, int end_index) const = 0;
     virtual Sequence<T>* map(std::function<T(T)> func) = 0;
+    virtual Sequence<T>* reset() = 0;
 
     virtual std::string to_string() const = 0;
 };

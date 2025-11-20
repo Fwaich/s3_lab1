@@ -31,6 +31,8 @@ public:
 
     ArraySequence<T>* map(std::function<T(T)> func) override;
 
+    ArraySequence<T>* reset() override;
+
     std::string to_string() const override;
 
 };
@@ -144,6 +146,11 @@ ArraySequence<T>* ArraySequence<T>::get_subsequence(int start_index, int end_ind
 
 template <typename T>
 ArraySequence<T>* ArraySequence<T>::map(std::function<T(T)> func) {
+    return this;
+}
+
+template <typename T>
+ArraySequence<T>* ArraySequence<T>::reset() {
     return this;
 }
 
