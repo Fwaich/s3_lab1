@@ -1,4 +1,5 @@
 #pragma once
+#include <type_traits>
 
 template<class T>
 class Unique_Ptr 
@@ -9,11 +10,26 @@ private:
 public:
     explicit Unique_Ptr(T* ptr = nullptr) noexcept : ptr_(ptr) {};
 
+    // Конструктор для производных классов
+    template<typename U>
+    explicit Unique_Ptr(U* ptr) noexcept : ptr_(ptr) {
+        static_assert(std::is_convertible_v<U*, T*>, 
+                     "U* must be convertible to T*");
+    }
+
     Unique_Ptr(const Unique_Ptr&) = delete;
     Unique_Ptr& operator=(const Unique_Ptr&) = delete;
 
+    // Конструктор перемещения для того же типа
     Unique_Ptr(Unique_Ptr&& other) noexcept : ptr_(other.ptr_) {
         other.ptr_ = nullptr;
+    }
+
+    // Конструктор перемещения для производных классов
+    template<typename U>
+    Unique_Ptr(Unique_Ptr<U>&& other) noexcept : ptr_(other.release()) {
+        static_assert(std::is_convertible_v<U*, T*>, 
+                     "U* must be convertible to T*");
     }
 
     ~Unique_Ptr() {
@@ -37,10 +53,44 @@ public:
         ptr_ = ptr;
     }
 
+    // Reset для производных классов
+    template<typename U>
+    void reset(U* ptr = nullptr) noexcept {
+        static_assert(std::is_convertible_v<U*, T*>, 
+                     "U* must be convertible to T*");
+        
+        if (static_cast<T*>(ptr) == ptr_) return;
+
+        delete ptr_;
+        ptr_ = ptr;
+    }
+
     void swap(Unique_Ptr& other) noexcept {
         T* temp = ptr_;
         ptr_ = other.ptr_;
         other.ptr_ = temp;
+    }
+
+    // Оператор присваивания перемещения для того же типа
+    Unique_Ptr& operator=(Unique_Ptr&& other) noexcept {
+        if (this != &other) {
+            delete ptr_;
+            ptr_ = other.ptr_;
+            other.ptr_ = nullptr;
+        }
+        return *this;
+    }
+
+    // Оператор присваивания перемещения для производных классов
+    template<typename U>
+    Unique_Ptr& operator=(Unique_Ptr<U>&& other) noexcept {
+        static_assert(std::is_convertible_v<U*, T*>, 
+                     "U* must be convertible to T*");
+        
+        if (this != static_cast<void*>(&other)) {
+            reset(other.release());
+        }
+        return *this;
     }
 
     T* operator->() const noexcept {
@@ -54,7 +104,6 @@ public:
     explicit operator bool() const noexcept {
         return ptr_ != nullptr;
     }
-
 };
 
 template<class T>
@@ -111,7 +160,6 @@ public:
     T& operator[](size_t index) const {
         return ptr_[index];
     }
-    
     
     explicit operator bool() const noexcept {
         return ptr_ != nullptr;

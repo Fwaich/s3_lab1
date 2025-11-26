@@ -1,133 +1,93 @@
 #pragma once
-#include <iostream>
-#include "exceptions.hpp"
+#include <stdexcept>
 
 template <typename T>
-class DynamicArray 
-{
-private:    
+class Dynamic_Array {
+private:
     T* data;
     int size;
     int capacity;
 
-private:
-    void reallocate(int new_capacity);
+    void ensure_capacity(int min_capacity) {
+        if (min_capacity <= capacity)
+            return;
+
+        int new_capacity = (capacity == 0) ? 1 : capacity * 2;
+
+        T* new_data = new T[new_capacity];
+
+        for (int i = 0; i < size; ++i) {
+            new_data[i] = data[i];
+        }
+
+        delete[] data;
+        data = new_data;
+        capacity = new_capacity;
+    }
 
 public:
-    DynamicArray();
-    DynamicArray(int size_value);
-    DynamicArray(T* items, int count);
-    ~DynamicArray();
+    Dynamic_Array() : data(nullptr), size(0), capacity(0) {}
 
-    T get(int index) const;
-    int get_size() const;
-    void set(int index, T value);
-    void resize(int new_size);
-
-    void print();
-};
-
-template <typename T>
-DynamicArray<T>::DynamicArray(): data(nullptr), size(0), capacity(0) {};
-
-template <typename T>
-DynamicArray<T>::DynamicArray(int size_value) {
-    size = size_value;
-    capacity = size;
-    data = new T[capacity];
-    
-    for (int i = 0; i < size; i++) {
-        data[i] = T();
-    }
-};
-
-template <typename T>
-DynamicArray<T>::DynamicArray(T* items, int count) {
-    size = count;
-    capacity = size;
-    data = new T[capacity];
-    for (int i = 0; i < size; i++) {
-        data[i] = items[i];
-    }
-};
-
-template <typename T>
-DynamicArray<T>::~DynamicArray() {
-    delete[] data;
-};
-
-template <typename T>
-void DynamicArray<T>::reallocate(int new_capacity) {
-    T* tmp_data = new T[new_capacity];
-    
-    int elements_to_copy = (size < new_capacity) ? size : new_capacity;
-    for (int i = 0; i < elements_to_copy; i++) {
-        tmp_data[i] = data[i];
-    }
-    
-    for (int i = elements_to_copy; i < new_capacity; i++) {
-        tmp_data[i] = T();
+    Dynamic_Array(int initial_size) : size(initial_size), capacity(initial_size) {
+        data = new T[capacity];
     }
 
-    delete[] data;
-    data = tmp_data;
-    capacity = new_capacity;
-    
-    if (new_capacity < size) {
-        size = new_capacity;
-    }
-}
-
-template <typename T>
-T DynamicArray<T>::get(int index) const {
-    if (index >= size || index < 0) throw out_of_range();
-    return data[index];
-}
-
-template <typename T>
-int DynamicArray<T>::get_size() const {
-    return size;
-};
-
-template <typename T>
-void DynamicArray<T>::set(int index, T value) {
-    if (index >= size || index < 0) throw out_of_range();
-    data[index] = value; 
-};
-
-template <typename T>
-void DynamicArray<T>::resize(int new_size) {
-    if (new_size < 0) {
-        throw std::invalid_argument("Array: New size must be non-negative");
-    }
-    
-    if (new_size > capacity) {
-        int new_capacity;
-        if (capacity == 0) {
-            new_capacity = (new_size > 1) ? new_size : 1; 
-        } else {
-            new_capacity = (capacity * 2 > new_size) ? capacity * 2 : new_size;
-        }
-        reallocate(new_capacity);
-    }
-    
-    if (new_size > size) {
-        for (int i = size; i < new_size; i++) {
-            data[i] = T();
+    Dynamic_Array(const T* arr, int count) : size(count), capacity(count) {
+        data = new T[capacity];
+        for (int i = 0; i < count; ++i) {
+            data[i] = arr[i];
         }
     }
-    
-    size = new_size;
+
+    Dynamic_Array(const Dynamic_Array<T>& other) : size(other.size), capacity(other.capacity) {
+        data = new T[capacity];
+        for (int i = 0; i < size; ++i) {
+            data[i] = other.data[i];
+        }
+    }
+
+    ~Dynamic_Array() {
+        delete[] data;
+    }
+
+    void push_back(const T& value) {
+        ensure_capacity(size + 1);
+        data[size++] = value;
+    }
+
+    //не нужно(но нужно там где prepend Arr_Seq)
+    void push_front(const T& value) {
+        ensure_capacity(size + 1);
+        for (int i = size; i > 0; --i) {
+            data[i] = data[i - 1];
+        }
+
+        data[0] = value;
+        ++size;
+    }
+
+    void set(int index, const T& value) {
+        if (index < 0 || index >= size)
+            throw std::out_of_range("Dynamic_Array::set index out of range");
+        data[index] = value;
+    }
+
+    //осознать возвращаемый тип
+    T get(int index) const {
+        if (index < 0 || index >= size)
+            throw std::out_of_range("Dynamic_Array::get index out of range");
+        return data[index];
+    }
+
+    int get_size() const {
+        return size; 
+    }
+
+    void reset() {
+        if (!data) return;
+        delete[] data;
+        data = nullptr;
+        size = 0;
+        capacity = 0;
+    }
 };
-
-template <typename T>
-void DynamicArray<T>::print() {
-    if (size == 0) {
-        std::cout << "Empty" << std::endl;
-        return;
-    }
-
-    for (int i = 0; i < size; i++) {
-        std::cout << "[" << i << "]: " << data[i] << std::endl;
-    }
-}

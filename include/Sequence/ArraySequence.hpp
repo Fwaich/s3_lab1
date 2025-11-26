@@ -1,181 +1,157 @@
 #pragma once
-#include <type_traits>
 #include <sstream>
-#include <iomanip>
-#include "DynamicArray.hpp"
+#include <stdexcept>
+#include <string>
 #include "Sequence.hpp"
-#include "exceptions.hpp"
+#include "DynamicArray.hpp"
 
 template <typename T>
-class ArraySequence : public Sequence<T>
+class Array_Sequence : public Sequence<T>
 {
 private:
-    DynamicArray<T>* items;
+    Dynamic_Array<T> array;
+
 public:
+    Array_Sequence() = default;
 
-    ArraySequence();
-    ArraySequence(T* arr, int count);
-    ArraySequence( ArraySequence<T>& seq);
-    ~ArraySequence() override;
+    Array_Sequence(int initial_size) : array(initial_size) {} 
 
-    ArraySequence<T>* append(const T& item) override;
-    ArraySequence<T>* prepend(const T& item) override;
-    ArraySequence<T>* set(int index, const T& item) override;
+    Array_Sequence(const T* arr, int count) : array(arr, count) {}
 
-    T get(int index) const override;
-    T get_first() const override;
-    T get_last() const override;
-    int get_size() const override;
+    Array_Sequence(const Array_Sequence<T>& other) : array(other.array) {}
 
-    ArraySequence<T>* get_subsequence(int start_index, int end_index) const override;
+    Array_Sequence(const Sequence<T>* seq) : array(seq->get_size()) {
+        for (int i = 0; i < seq->get_size(); i++) {
+            array.set(i, seq->get(i));
+        }
+    }
 
-    ArraySequence<T>* map(std::function<T(T)> func) override;
+    ~Array_Sequence() override = default;
 
-    ArraySequence<T>* reset() override;
+    Array_Sequence<T>* append(const T& item) override {
+        array.push_back(item);
+        return this;
+    }
 
-    std::string to_string() const override;
+    Array_Sequence<T>* prepend(const T& item) override {
+        array.push_front(item);
+        return this;
+    }
 
+    Array_Sequence<T>* set(int index, const T& item) override {
+        array.set(index, item);
+        return this;
+    }
+
+    Array_Sequence<T>* insert_at(int index, const Sequence<T>* other_seq) override {
+        if (index < 0 || index > array.get_size()) {
+            throw std::out_of_range("Index out of range");
+        }
+        
+        if (other_seq == nullptr) {
+            throw std::invalid_argument("Other sequence cannot be null");
+        }
+
+        int other_size = other_seq->get_size();
+
+        if (index == array.get_size()) {
+            for (int i = 0; i < other_size; i++) {
+                array.push_back(other_seq->get(i));
+            }
+            return this;
+        }
+
+        if (index == 0) {
+
+            for (int i = other_size - 1; i >= 0; --i) {
+                array.push_front(other_seq->get(i));
+            }
+            return this;
+        }
+
+        Dynamic_Array<T> temp;
+        
+        for (int i = 0; i < index; i++) {
+            temp.push_back(array.get(i));
+        }
+        
+        for (int i = 0; i < other_size; i++) {
+            temp.push_back(other_seq->get(i));
+        }
+        
+        for (int i = index; i < array.get_size(); i++) {
+            temp.push_back(array.get(i));
+        }
+        
+        array = std::move(temp);
+        return this;
+    }
+
+    T get(int index) const override {
+        return array.get(index);
+    }
+
+    T get_first() const override {
+        if (array.get_size() == 0)
+            throw std::runtime_error("Sequence is empty");
+        return array.get(0);
+    }
+
+    T get_last() const override {
+        int vector_size = array.get_size();
+        if (vector_size == 0)
+            throw std::runtime_error("Sequence is empty");
+        return array.get(vector_size - 1);
+    }
+
+    int get_size() const override {
+        return array.get_size();
+    }
+
+    Array_Sequence<T>* get_subsequence(int start_index, int end_index) const override {
+        if (array.get_size() == 0)
+            throw std::runtime_error("Sequence is empty");
+
+        if (start_index < 0 || end_index >= array.get_size() || start_index > end_index)
+            throw std::out_of_range("Invalid subsequence range");
+
+        int sub_size = end_index - start_index + 1;
+        Array_Sequence<T>* sub = new Array_Sequence<T>;
+
+        for (int i = start_index; i < end_index + 1; i++) {
+            T item = array.get(i);
+            sub->append(item);
+        }
+
+        return sub;
+    }
+
+    Array_Sequence<T>* map(std::function<T(T)> func ) override {
+        Array_Sequence<T>* mapped_vector = new Array_Sequence<T>(array.get_size());
+
+        for (int i = 0; i < array.get_size(); i++){
+            T mapped_item = func(array.get(i));
+            mapped_vector->set(i, mapped_item);
+        }
+
+        return mapped_vector;
+    }
+
+    Array_Sequence<T>* reset() override {
+        array.reset();
+
+        return this;
+    }
+
+    //отдельный модуль за вывод
+    std::string to_string() const override {
+        std::ostringstream oss;
+        oss << "[";
+        for (int i = 0; i < array.get_size(); i++){
+            oss << array.get(i);
+            if (i + 1 < array.get_size())  oss << ", ";
+        }
+        oss << "]";
+        return oss.str();
+    }
 };
-
-template <typename T>
-ArraySequence<T>::ArraySequence(){
-    items = new DynamicArray<T>;
-}
-
-template <typename T>
-ArraySequence<T>::ArraySequence(T* arr, int count){
-    items = new DynamicArray<T>(arr, count);
-}
-
-template <typename T>
-ArraySequence<T>::ArraySequence(ArraySequence<T>& seq){
-    items = new DynamicArray<T>(seq.get_size());
-
-    for (int i = 0; i < seq.get_size(); i++){
-        items->set(i, seq.get(i));
-    }
-}
-
-template <typename T>
-ArraySequence<T>::~ArraySequence(){
-    delete items;
-}
-
-template <typename T>
-ArraySequence<T>* ArraySequence<T>::append(const T& item){
-    int new_size = items->get_size() + 1;
-    items->resize(new_size);
-
-    items->set(new_size - 1, item);
-
-    return this;
-}
-
-template <typename T>
-ArraySequence<T>* ArraySequence<T>::prepend(const T& item){
-    int new_size = items->get_size() + 1;
-    items->resize(new_size);
-
-    for (int i = new_size - 1; i > 0; i--) {
-        items->set(i, items->get(i - 1));
-    }
-
-    items->set(0, item);
-
-    return this;
-}
-
-template <typename T>
-ArraySequence<T>* ArraySequence<T>::set(int index, const T& item){
-    items->set(index, item);
-
-    return this;
-}
-
-template <typename T>
-T ArraySequence<T>::get(int index) const {
-    return items->get(index);
-}
-
-template <typename T>
-int ArraySequence<T>::get_size() const {
-    return items->get_size();
-}
-
-template <typename T>
-T ArraySequence<T>::get_first() const {
-    if (items->get_size() == 0) throw out_of_range();
-    return items->get(0);
-}
-
-template <typename T>
-T ArraySequence<T>::get_last() const {
-    int size_of_array = items->get_size();
-    if (size_of_array == 0) throw out_of_range();
-    return items->get(size_of_array - 1);
-}
-
-template <typename T>
-ArraySequence<T>* ArraySequence<T>::get_subsequence(int start_index, int end_index) const {
-    if (!items) throw data_is_null();
-    if (get_size() == 0) throw data_is_null();
-
-    if (start_index < 0 || start_index >= items->get_size() ||
-        end_index < 0 || end_index >= items->get_size()) {
-        throw out_of_range();
-    }
-
-    if (start_index > end_index){
-        int tmp = end_index;
-        end_index = start_index;
-        start_index = tmp;
-    }
-
-    int sub_size = end_index - start_index + 1;
-    T* sub_data = new T[sub_size];
-
-    int j = 0;
-    for (int i = start_index; i < end_index + 1; i++) {
-        sub_data[j++] = items->get(i);
-    }
-
-    ArraySequence<T>* sub_array = new ArraySequence<T>(sub_data, sub_size);
-    delete[] sub_data;
-    return sub_array;
-}
-
-template <typename T>
-ArraySequence<T>* ArraySequence<T>::map(std::function<T(T)> func) {
-    return this;
-}
-
-template <typename T>
-ArraySequence<T>* ArraySequence<T>::reset() {
-    return this;
-}
-
-
-template <typename T>
-std::string ArraySequence<T>::to_string() const {
-    std::string result = "[";
-
-    for (int i = 0; i < items->get_size(); ++i) {
-        if constexpr (std::is_same_v<T, std::string>) {
-            result += items->get(i);
-        } else if constexpr (std::is_same_v<T, double>) {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(3) << items->get(i);
-            result += oss.str();
-        } else {
-            result += std::to_string(items->get(i));
-        }
-
-        if (i != items->get_size() - 1) {
-            result += ", ";
-        }
-    }
-
-    result += "]";
-    return result;
-}
-
