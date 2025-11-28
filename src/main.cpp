@@ -1,5 +1,6 @@
 #include "Sequnces.hpp"
 #include "UniquePtr.hpp"
+#include "SharedPtr.hpp"
 #include "ReadOnlyStream.hpp"
 #include "Cardinal.hpp"
 #include <iostream>
@@ -116,10 +117,13 @@ void test_append() {
     // }
     // std::cout << std::endl;
 
-    l.insert_at(5,b);
+    Array_Sequence<int>* bc = new Array_Sequence<int>(b);
+
+    l.insert_at(5, b);
+    l.prepend(bc);
 
     i = 0;
-    while(l.has_next() && i < 100){
+    while(l.has_next() && i < 50){
         int item = l.get(i++);
         std::cout << item << std::endl;
     }

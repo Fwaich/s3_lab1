@@ -72,7 +72,6 @@ public:
         data[index] = value;
     }
 
-    //осознать возвращаемый тип
     T get(int index) const {
         if (index < 0 || index >= size)
             throw std::out_of_range("Dynamic_Array::get index out of range");

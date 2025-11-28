@@ -1,4 +1,5 @@
 #pragma once
+#include"UniquePtr.hpp"
 
 template <typename T>
 class Lazy_Sequence;
@@ -17,12 +18,12 @@ class Function_Generator : public Generator<T>
 {
 private: 
     Lazy_Sequence<T>* owner;
-    Array_Sequence<T> args_buffer; //нет необходимости хранить в полях тк постоянно перезаполоняется (кольцевой массив)
-    std::function<T(Sequence<T>*)> rule;
+    std::function<T(const Sequence<T>&)> rule;
+    size_t arity;
 
 public:
     Function_Generator(Lazy_Sequence<T>* owner, size_t arity, std::function<T(const Sequence<T>&)> rule) {
-        this->args_buffer = Array_Sequence<T>(arity);
+        this->arity = arity;
         this->owner = owner;
         this->rule = rule;
     }
@@ -30,9 +31,10 @@ public:
     ~Function_Generator() {}
 
     T get_next() override {
-        if (owner->get_materialized_count() < args_buffer.get_size())
+        if (owner->get_materialized_count() <  arity)
             throw std::runtime_error("Not enough elements to generate next");
 
+        Array_Sequence<T> args_buffer(arity);
         size_t size = owner->get_materialized_count();
         for (size_t i = 0; i < args_buffer.get_size(); i++) {
             args_buffer.set(i, owner->get(size - 1 - i));
@@ -82,18 +84,17 @@ template <typename T>
 class Concat_Generator : public Generator<T> 
 {
 private:
-    Generator<T>* first;
-    Generator<T>* second;
+    Unique_Ptr<Generator<T>> first;
+    Unique_Ptr<Generator<T>> second;
 
 public:
-    Concat_Generator(Generator<T>* primary_generator, Generator<T>* secondary_generator) {
-        this->first = primary_generator;
-        this->second = secondary_generator;
+    Concat_Generator(Unique_Ptr<Generator<T>>&& primary_generator, Unique_Ptr<Generator<T>>&& secondary_generator) {
+        this->first = std::move(primary_generator);
+        this->second = std::move(secondary_generator);
     }
 
     ~Concat_Generator() { //SMART_PTRS!!!
-        delete first;
-        delete second;
+        
     }
 
     T get_next() override {
@@ -110,24 +111,23 @@ template <typename T>
 class Insert_Generator : public Generator<T> 
 {
 private:
-    Generator<T>* primary;
-    Generator<T>* secondary;
+    Unique_Ptr<Generator<T>> primary;
+    Unique_Ptr<Generator<T>> secondary;
     int current_index;
     int insert_index;
 
 public:
-    Insert_Generator(Generator<T>* primary_generator, Generator<T>* secondary_generator, 
+    Insert_Generator(Unique_Ptr<Generator<T>>&& primary_generator, Unique_Ptr<Generator<T>>&& secondary_generator, 
         int insert_index, int current_index) {
 
-        this->primary = primary_generator;
-        this->secondary = secondary_generator;
+        this->primary = std::move(primary_generator);
+        this->secondary = std::move(secondary_generator);
         this->insert_index = insert_index;
         this->current_index = current_index;
     }
 
     ~Insert_Generator() {
-        delete primary;
-        delete secondary;
+        
     }
 
     T get_next() override {
