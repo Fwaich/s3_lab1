@@ -1,5 +1,7 @@
 #pragma once
 #include"UniquePtr.hpp"
+#include"SharedPtr.hpp"
+#include"WeakPtr.hpp"
 
 template <typename T>
 class Lazy_Sequence;

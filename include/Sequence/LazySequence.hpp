@@ -5,6 +5,7 @@
 #include "ArraySequence.hpp"
 #include "Cardinal.hpp"
 #include "UniquePtr.hpp"
+#include "SharedPtr.hpp"
 #include <functional> 
 
 template <typename T>
@@ -16,9 +17,9 @@ private:
 
 public:
 
-    Lazy_Sequence(Sequence<T>*  start_sequence, size_t arity, std::function<T(Sequence<T>*)> rule){ 
+    Lazy_Sequence(Sequence<T>*  start_sequence, size_t arity, std::function<T(const Sequence<T>&)> rule){ 
         this->materialized_data = Unique_Ptr<Sequence<T>>(start_sequence);
-        this->generator = make_unique<Function_Generator<T>>(this, arity, rule);
+        this->generator =  ::make_unique<Function_Generator<T>>(this, arity, rule);
     }
 
     Lazy_Sequence(Sequence<T>* start_sequence, Generator<T>* gen) {

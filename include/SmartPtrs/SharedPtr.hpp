@@ -1,214 +1,265 @@
 #pragma once
 #include <type_traits>
 
+template<class T> class Weak_Ptr;
+
 template<class T>
-class SharedPtr 
+class Shared_Ptr 
 {
 private:
     T* ptr_;
     size_t* ref_count;
+    size_t* weak_count;
 
 private:
     void cleanup() {
         if (ref_count) {
             --(*ref_count);
+
             if (*ref_count == 0) {
                 delete ptr_;
-                delete ref_count;
+                ptr_ = nullptr;
+
+                if (weak_count && *weak_count == 0) {
+                    delete ref_count;
+                    delete weak_count;
+                    ref_count = nullptr;
+                    weak_count = nullptr;
+                }
             }
         }
     }
 
+    Shared_Ptr(T* p, size_t* rc, size_t* wc) noexcept
+        : ptr_(p), ref_count(rc), weak_count(wc) {}
+
 public:
 
-    SharedPtr() noexcept : ptr_(nullptr), ref_count(nullptr) {}
+    Shared_Ptr() noexcept
+        : ptr_(nullptr), ref_count(nullptr), weak_count(nullptr) {}
 
-    explicit SharedPtr(T* ptr) noexcept 
-        : ptr_(ptr), ref_count(new size_t(1)) {}
+    explicit Shared_Ptr(T* ptr) noexcept
+        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0)) {}
 
     template<typename U>
-    explicit SharedPtr(U* ptr) noexcept : ptr_(ptr), ref_count(new size_t(1)) {
-        static_assert(std::is_convertible_v<U*, T*>, 
+    explicit Shared_Ptr(U* ptr) noexcept
+        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0))
+    {
+        static_assert(std::is_convertible_v<U*, T*>,
                      "U* must be convertible to T*");
     }
 
-    // copy
-    SharedPtr(const SharedPtr& other) noexcept : ptr_(other.ptr_), ref_count(other.ref_count) {
+    // Copy ctor
+    Shared_Ptr(const Shared_Ptr& other) noexcept
+        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+    {
         if (ref_count) ++(*ref_count);
     }
 
     template<typename U>
-    SharedPtr(const SharedPtr<U>& other) noexcept : ptr_(other.ptr_), ref_count(other.ref_count) {
-        static_assert(std::is_base_of_v<T, U>, 
+    Shared_Ptr(const Shared_Ptr<U>& other) noexcept
+        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+    {
+        static_assert(std::is_convertible_v<U*, T*>,
                      "U must be derived from T");
-
         if (ref_count) ++(*ref_count);
     }
 
-    // move
-    SharedPtr(SharedPtr&& other) noexcept : ptr_(other.ptr_), ref_count(other.ref_count) {
+    // Move ctor
+    Shared_Ptr(Shared_Ptr&& other) noexcept
+        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+    {
         other.ptr_ = nullptr;
         other.ref_count = nullptr;
+        other.weak_count = nullptr;
     }
 
     template<typename U>
-    SharedPtr(SharedPtr<U>&& other) noexcept : ptr_(other.ptr_), ref_count(other.ref_count) {
-        static_assert(std::is_base_of_v<T, U>, 
+    Shared_Ptr(Shared_Ptr<U>&& other) noexcept
+        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+    {
+        static_assert(std::is_convertible_v<U*, T*>,
                      "U must be derived from T");
+
         other.ptr_ = nullptr;
         other.ref_count = nullptr;
+        other.weak_count = nullptr;
     }
 
-    ~SharedPtr() {
+    ~Shared_Ptr() {
         cleanup();
     }
 
-    // copy assign
-    SharedPtr& operator=(const SharedPtr& other) noexcept {
+    // Copy assign
+    Shared_Ptr& operator=(const Shared_Ptr& other) noexcept {
         if (this != &other) {
             cleanup();
             ptr_ = other.ptr_;
             ref_count = other.ref_count;
+            weak_count = other.weak_count;
+
             if (ref_count) ++(*ref_count);
         }
         return *this;
     }
 
     template<typename U>
-    SharedPtr& operator=(const SharedPtr<U>& other) noexcept {
-        static_assert(std::is_base_of_v<T, U>, 
+    Shared_Ptr& operator=(const Shared_Ptr<U>& other) noexcept {
+        static_assert(std::is_convertible_v<U*, T*>,
                      "U must be derived from T");
-
         cleanup();
         ptr_ = other.ptr_;
         ref_count = other.ref_count;
+        weak_count = other.weak_count;
         if (ref_count) ++(*ref_count);
         return *this;
     }
 
-    // move assign
-    SharedPtr& operator=(SharedPtr&& other) noexcept {
+    // Move assign
+    Shared_Ptr& operator=(Shared_Ptr&& other) noexcept {
         if (this != &other) {
             cleanup();
             ptr_ = other.ptr_;
             ref_count = other.ref_count;
+            weak_count = other.weak_count;
 
             other.ptr_ = nullptr;
             other.ref_count = nullptr;
+            other.weak_count = nullptr;
         }
         return *this;
     }
 
     template<typename U>
-    SharedPtr& operator=(SharedPtr<U>&& other) noexcept {
-        static_assert(std::is_base_of_v<T, U>, 
+    Shared_Ptr& operator=(Shared_Ptr<U>&& other) noexcept {
+        static_assert(std::is_convertible_v<U*, T*>,
                      "U must be derived from T");
-
         cleanup();
         ptr_ = other.ptr_;
         ref_count = other.ref_count;
+        weak_count = other.weak_count;
 
         other.ptr_ = nullptr;
         other.ref_count = nullptr;
+        other.weak_count = nullptr;
+
         return *this;
     }
 
-    // accessors
+    // Observers
     T* get() const noexcept { return ptr_; }
-    T& operator*() const noexcept { return *ptr_; }
+    T& operator*()  const noexcept { return *ptr_; }
     T* operator->() const noexcept { return ptr_; }
 
     explicit operator bool() const noexcept { return ptr_ != nullptr; }
 
-    int use_count() const noexcept {
-        return ref_count ? int(*ref_count) : 0;
-    }
+    int use_count() const noexcept { return ref_count ? int(*ref_count) : 0; }
+    bool unique() const noexcept { return use_count() == 1; }
 
-    bool unique() const noexcept {
-        return use_count() == 1;
-    }
-
+    // reset
     void reset(T* ptr = nullptr) noexcept {
         cleanup();
         if (!ptr) {
             ptr_ = nullptr;
             ref_count = nullptr;
+            weak_count = nullptr;
         } else {
             ptr_ = ptr;
             ref_count = new size_t(1);
+            weak_count = new size_t(0);
         }
     }
 
     template<typename U>
     void reset(U* ptr) noexcept {
-        static_assert(std::is_base_of_v<T, U>, 
+        static_assert(std::is_convertible_v<U*, T*>,
                      "U must be derived from T");
         reset(static_cast<T*>(ptr));
     }
 
-    void swap(SharedPtr& other) noexcept {
+    void swap(Shared_Ptr& other) noexcept {
         std::swap(ptr_, other.ptr_);
         std::swap(ref_count, other.ref_count);
+        std::swap(weak_count, other.weak_count);
     }
 
-    template<typename U>
-    friend class SharedPtr;
+    template<typename U> friend class Shared_Ptr;
+    template<typename U> friend class Weak_Ptr;
 };
 
 template<class T>
-class SharedPtr<T[]> 
+class Shared_Ptr<T[]> 
 {
 private:
     T* ptr_;
     size_t* ref_count;
+    size_t* weak_count;
 
 private:
     void cleanup() {
         if (ref_count) {
             --(*ref_count);
+
             if (*ref_count == 0) {
                 delete[] ptr_;
-                delete ref_count;
+                ptr_ = nullptr;
+
+                if (weak_count && *weak_count == 0) {
+                    delete ref_count;
+                    delete weak_count;
+                    ref_count = nullptr;
+                    weak_count = nullptr;
+                }
             }
         }
     }
 
 public:
-    SharedPtr() noexcept : ptr_(nullptr), ref_count(nullptr) {}
+    Shared_Ptr() noexcept
+        : ptr_(nullptr), ref_count(nullptr), weak_count(nullptr) {}
 
-    explicit SharedPtr(T* ptr) noexcept 
-        : ptr_(ptr), ref_count(new size_t(1)) {}
+    explicit Shared_Ptr(T* ptr) noexcept
+        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0)) {}
 
-    SharedPtr(const SharedPtr& other) noexcept : ptr_(other.ptr_), ref_count(other.ref_count) {
+    Shared_Ptr(const Shared_Ptr& other) noexcept
+        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+    {
         if (ref_count) ++(*ref_count);
     }
 
-    SharedPtr(SharedPtr&& other) noexcept : ptr_(other.ptr_), ref_count(other.ref_count) {
+    Shared_Ptr(Shared_Ptr&& other) noexcept
+        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+    {
         other.ptr_ = nullptr;
         other.ref_count = nullptr;
+        other.weak_count = nullptr;
     }
 
-    ~SharedPtr() {
+    ~Shared_Ptr() {
         cleanup();
     }
 
-    SharedPtr& operator=(const SharedPtr& other) noexcept {
+    Shared_Ptr& operator=(const Shared_Ptr& other) noexcept {
         if (this != &other) {
             cleanup();
             ptr_ = other.ptr_;
             ref_count = other.ref_count;
+            weak_count = other.weak_count;
             if (ref_count) ++(*ref_count);
         }
         return *this;
     }
 
-    SharedPtr& operator=(SharedPtr&& other) noexcept {
+    Shared_Ptr& operator=(Shared_Ptr&& other) noexcept {
         if (this != &other) {
             cleanup();
             ptr_ = other.ptr_;
             ref_count = other.ref_count;
+            weak_count = other.weak_count;
+
             other.ptr_ = nullptr;
             other.ref_count = nullptr;
+            other.weak_count = nullptr;
         }
         return *this;
     }
@@ -225,25 +276,30 @@ public:
         if (!ptr) {
             ptr_ = nullptr;
             ref_count = nullptr;
+            weak_count = nullptr;
         } else {
             ptr_ = ptr;
             ref_count = new size_t(1);
+            weak_count = new size_t(0);
         }
     }
 
-    void swap(SharedPtr& other) noexcept {
+    void swap(Shared_Ptr& other) noexcept {
         std::swap(ptr_, other.ptr_);
         std::swap(ref_count, other.ref_count);
+        std::swap(weak_count, other.weak_count);
     }
+
+    template<typename U> friend class Weak_Ptr;
 };
 
-
 template<typename T, typename... Args>
-SharedPtr<T> make_shared(Args&&... args) {
-    return SharedPtr<T>(new T(std::forward<Args>(args)...));
+Shared_Ptr<T> make_shared(Args&&... args) {
+    return Shared_Ptr<T>(new T(std::forward<Args>(args)...));
 }
 
 template<typename T>
-SharedPtr<T[]> make_shared(size_t size) {
-    return SharedPtr<T[]>(new T[size]);
+Shared_Ptr<T[]> make_shared(size_t size) {
+    return Shared_Ptr<T[]>(new T[size]);
 }
+

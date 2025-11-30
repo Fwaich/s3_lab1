@@ -11,10 +11,10 @@
 //     return index * 2;
 // };
 
-// auto fib = [](Sequence<long long>* seq) -> long long {
-//     size_t size = seq->get_size();
-//     return seq->get(size - 1) + seq->get(size - 2);
-// };
+auto fib = [](const Sequence<int>& seq) -> int {
+    size_t size = seq.get_size();
+    return seq.get(size - 1) + seq.get(size - 2);
+};
 
 // long long fib1 (Sequence<long long>* seq) {
 //     size_t size = seq->get_size();
@@ -99,17 +99,17 @@
 
 void test_append() {
     Sequence<int>* a = new Array_Sequence<int>;
-    for (int i = 0; i <= 10; ++i) {
+    for (int i = 0; i <= 1; ++i) {
         a->append(i);
     }
 
-    Sequence<int>* b = new Array_Sequence<int>;
-    for (int i = 11; i <= 20; ++i) {
-        b->append(i);
-    }
+    // Sequence<int>* b = new Array_Sequence<int>;
+    // for (int i = 11; i <= 20; ++i) {
+    //     b->append(i);
+    // }
 
 
-    Lazy_Sequence<int> l(a);
+    Lazy_Sequence<int> l(a, 2, fib);
     int i = 0;
     // while(l.has_next() && i < 5){
     //     int item = l.get(i++);
@@ -117,10 +117,10 @@ void test_append() {
     // }
     // std::cout << std::endl;
 
-    Array_Sequence<int>* bc = new Array_Sequence<int>(b);
+    // Array_Sequence<int>* bc = new Array_Sequence<int>(b);
 
-    l.insert_at(5, b);
-    l.prepend(bc);
+    // l.insert_at(5, b);
+    // l.prepend(b);
 
     i = 0;
     while(l.has_next() && i < 50){
