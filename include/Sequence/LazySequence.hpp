@@ -13,31 +13,26 @@ class Lazy_Sequence
 {
 private:
     Unique_Ptr<Generator<T>> generator;
-    Unique_Ptr<Sequence<T>> materialized_data;
+    Unique_Ptr<Array_Sequence<T>> materialized_data;
 
 public:
 
-    Lazy_Sequence(Sequence<T>*  start_sequence, size_t arity, std::function<T(const Sequence<T>&)> rule){ 
-        this->materialized_data = Unique_Ptr<Sequence<T>>(start_sequence);
-        this->generator =  ::make_unique<Function_Generator<T>>(this, arity, rule);
+    Lazy_Sequence(const Sequence<T>&  start_sequence, std::function<T(const Array_Sequence<T>&)> rule){ 
+        this->materialized_data = make_unique<Array_Sequence<T>>();
+        this->generator =  ::make_unique<Function_Generator<T>>(start_sequence, rule);
     }
 
-    Lazy_Sequence(Sequence<T>* start_sequence, Generator<T>* gen) {
-        this->materialized_data = Unique_Ptr<Sequence<T>>(start_sequence);
-        this->generator = Unique_Ptr<Generator<T>>(gen);
-    }
-
-    Lazy_Sequence(Sequence<T>*  sequence){
+    Lazy_Sequence(const Sequence<T>& sequence){
         this->materialized_data = make_unique<Array_Sequence<T>>();
         this->generator = make_unique<Sequence_Generator<T>>(sequence);
     }
 
-    ~Lazy_Sequence() {
-        // delete materialized_data;
-        // delete generator;
+    Lazy_Sequence(Unique_Ptr<Generator<T>>&& gen) {
+        this->materialized_data = make_unique<Array_Sequence<T>>();
+        this->generator = std::move(gen);
     }
 
-    T get(int index) {
+    T get(size_t index) {
         while (generator->has_next() && materialized_data->get_size() <= index) {
             materialized_data->append(generator->get_next());
         }
@@ -48,11 +43,11 @@ public:
         return materialized_data->get(index);
     }
 
-    T get_first() const {
+    T get_first_materialized() const {
         return materialized_data->get_first();
     }
 
-    T get_last() const {
+    T get_last_materialized() const {
         return materialized_data->get_last();
     }
 
@@ -60,49 +55,27 @@ public:
         return generator->has_next();
     }
 
-    // Lazy_Sequence<T>* get_subsequence(int start_index, int end_index) {
-    //     Lazy_Sequence<T>* sub_lazy_seq = new Lazy_Sequence<T>(
-    //         materialized_data->get_subsequence(start_index, end_index),
-    //         generator->clone(sub_lazy_seq)
-    //     );
-
-    //     return sub_lazy_seq;
-    // }
-
-    Lazy_Sequence<T>* append(Sequence<T>* items) { //lazy_seq можно аппендить!
-        auto end_generator = make_unique<Sequence_Generator<T>>(items);
-        auto append_generator = make_unique<Concat_Generator<T>>(std::move(this->generator), std::move(end_generator));
-        this->generator = std::move(append_generator);
-
-        return this;
+    Lazy_Sequence<T> append(const Lazy_Sequence<T>& items) {
+        auto append_generator = make_unique<Concat_Generator<T>>(
+            this->generator->clone(), items.generator->clone()
+        );  
+        return Lazy_Sequence<T>(std::move(append_generator)); 
     }
 
-    Lazy_Sequence<T>* prepend(Sequence<T>* items) {
-        this->materialized_data->reset();
-        auto start_generator = make_unique<Sequence_Generator<T>>(items);
-        auto prepend_generator = make_unique<Concat_Generator<T>>(std::move(start_generator), std::move(this->generator));
-        this->generator = std::move(prepend_generator);
-
-        return this;
+    Lazy_Sequence<T> prepend(const Lazy_Sequence<T>& items) {
+        auto prepend_generator = make_unique<Concat_Generator<T>>(
+            items.generator->clone(), this->generator->clone()
+        );  
+        return Lazy_Sequence<T>(std::move(prepend_generator)); 
     }
 
-    //как можно расширять наобор операции на sequnce без изменнения seq?(для каждого изм. методв должен быть такой же генер)
-    //ответ: вынести операции вне lazy_seq
-    Lazy_Sequence<T>* insert_at(int insert_index, Sequence<T>* items) { 
-        if (materialized_data->get_size() - 1 >= insert_index) {
-            materialized_data->insert_at(insert_index, items);
-            return this;
-        }
-
-        auto mid_generator = make_unique<Sequence_Generator<T>>(items);
+    Lazy_Sequence<T> insert_at(int insert_index, const Lazy_Sequence<T>& items) { 
         auto insert_generator = make_unique<Insert_Generator<T>>(
-            std::move(this->generator), std::move(mid_generator),
+            std::move(this->generator), std::move(items.generator->clone()),
             insert_index, materialized_data->get_size() - 1
         );
 
-        this->generator = std::move(insert_generator);
-
-        return this;
+        return Lazy_Sequence<T>(std::move(insert_generator));
     }
 
     size_t get_materialized_count() const {

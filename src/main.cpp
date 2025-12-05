@@ -11,7 +11,7 @@
 //     return index * 2;
 // };
 
-auto fib = [](const Sequence<int>& seq) -> int {
+auto fib = [](const Array_Sequence<int>& seq) -> int {
     size_t size = seq.get_size();
     return seq.get(size - 1) + seq.get(size - 2);
 };
@@ -98,37 +98,32 @@ auto fib = [](const Sequence<int>& seq) -> int {
 // }
 
 void test_append() {
-    Sequence<int>* a = new Array_Sequence<int>;
-    for (int i = 0; i <= 1; ++i) {
-        a->append(i);
+    // Sequence<int>* a = new Array_Sequence<int>;
+    // for (int i = 2; i <= 5; ++i) {
+    //     a->append(i);
+    // }
+
+    Sequence<int>* b = new Array_Sequence<int>;
+    for (int i = -10; i <= -8; ++i) {
+        b->append(i);
     }
 
-    // Sequence<int>* b = new Array_Sequence<int>;
-    // for (int i = 11; i <= 20; ++i) {
-    //     b->append(i);
-    // }
+    Array_Sequence<int> ab = Array_Sequence<int>();
+    for (int i = 0; i <= 1; ++i) {
+        ab.append(i);
+    }
+    auto l = Lazy_Sequence<int>(ab, fib);
+    auto l2 = Lazy_Sequence<int>(*b);
+    auto l3 = l.insert_at(2,l2);
 
-
-    Lazy_Sequence<int> l(a, 2, fib);
     int i = 0;
-    // while(l.has_next() && i < 5){
-    //     int item = l.get(i++);
-    //     std::cout << item << std::endl;
-    // }
-    // std::cout << std::endl;
-
-    // Array_Sequence<int>* bc = new Array_Sequence<int>(b);
-
-    // l.insert_at(5, b);
-    // l.prepend(b);
-
-    i = 0;
-    while(l.has_next() && i < 50){
-        int item = l.get(i++);
+    while(l3.has_next() && i < 10){
+        int item = l3.get(i++);
         std::cout << item << std::endl;
     }
 
-
+    // delete a;
+    delete b;
 }
 
 void test_cardinal() {

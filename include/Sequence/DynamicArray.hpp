@@ -82,6 +82,10 @@ public:
         return size; 
     }
 
+    void resize(int index) {
+        size -= index;
+    }
+
     void reset() {
         if (!data) return;
         delete[] data;

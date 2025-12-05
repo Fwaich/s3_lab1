@@ -20,9 +20,9 @@ public:
 
     Array_Sequence(const Array_Sequence<T>& other) : array(other.array) {}
 
-    Array_Sequence(const Sequence<T>* seq) : array(seq->get_size()) {
-        for (int i = 0; i < seq->get_size(); i++) {
-            array.set(i, seq->get(i));
+    Array_Sequence(const Sequence<T>& seq) : array(seq.get_size()) {
+        for (int i = 0; i < seq.get_size(); i++) {
+            array.set(i, seq.get(i));
         }
     }
 
@@ -40,6 +40,15 @@ public:
 
     Array_Sequence<T>* set(int index, const T& item) override {
         array.set(index, item);
+        return this;
+    }
+
+    Array_Sequence<T>* remove(int index) override {
+        for (int i = index; i < array.get_size() - 1; i++) {
+            array.set(i, array.get(i + 1));
+        }
+        
+        array.resize(array.get_size() - 1);
         return this;
     }
 

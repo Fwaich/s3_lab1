@@ -49,7 +49,6 @@ public:
                      "U* must be convertible to T*");
     }
 
-    // Copy ctor
     Shared_Ptr(const Shared_Ptr& other) noexcept
         : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
     {
@@ -60,12 +59,11 @@ public:
     Shared_Ptr(const Shared_Ptr<U>& other) noexcept
         : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
     {
-        static_assert(std::is_convertible_v<U*, T*>,
+        static_assert(std::is_base_of_v<U, T>,
                      "U must be derived from T");
         if (ref_count) ++(*ref_count);
     }
 
-    // Move ctor
     Shared_Ptr(Shared_Ptr&& other) noexcept
         : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
     {
@@ -78,7 +76,7 @@ public:
     Shared_Ptr(Shared_Ptr<U>&& other) noexcept
         : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
     {
-        static_assert(std::is_convertible_v<U*, T*>,
+        static_assert(std::is_base_of_v<U, T>,
                      "U must be derived from T");
 
         other.ptr_ = nullptr;
@@ -90,7 +88,6 @@ public:
         cleanup();
     }
 
-    // Copy assign
     Shared_Ptr& operator=(const Shared_Ptr& other) noexcept {
         if (this != &other) {
             cleanup();
@@ -105,7 +102,7 @@ public:
 
     template<typename U>
     Shared_Ptr& operator=(const Shared_Ptr<U>& other) noexcept {
-        static_assert(std::is_convertible_v<U*, T*>,
+        static_assert(std::is_base_of_v<U, T>,
                      "U must be derived from T");
         cleanup();
         ptr_ = other.ptr_;
@@ -115,7 +112,6 @@ public:
         return *this;
     }
 
-    // Move assign
     Shared_Ptr& operator=(Shared_Ptr&& other) noexcept {
         if (this != &other) {
             cleanup();
@@ -132,7 +128,7 @@ public:
 
     template<typename U>
     Shared_Ptr& operator=(Shared_Ptr<U>&& other) noexcept {
-        static_assert(std::is_convertible_v<U*, T*>,
+        static_assert(std::is_base_of_v<U, T>,
                      "U must be derived from T");
         cleanup();
         ptr_ = other.ptr_;
@@ -146,7 +142,6 @@ public:
         return *this;
     }
 
-    // Observers
     T* get() const noexcept { return ptr_; }
     T& operator*()  const noexcept { return *ptr_; }
     T* operator->() const noexcept { return ptr_; }
@@ -156,7 +151,6 @@ public:
     int use_count() const noexcept { return ref_count ? int(*ref_count) : 0; }
     bool unique() const noexcept { return use_count() == 1; }
 
-    // reset
     void reset(T* ptr = nullptr) noexcept {
         cleanup();
         if (!ptr) {
@@ -172,7 +166,7 @@ public:
 
     template<typename U>
     void reset(U* ptr) noexcept {
-        static_assert(std::is_convertible_v<U*, T*>,
+        static_assert(std::is_base_of_v<U, T>,
                      "U must be derived from T");
         reset(static_cast<T*>(ptr));
     }
