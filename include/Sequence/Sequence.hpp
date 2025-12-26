@@ -14,7 +14,7 @@ public:
     virtual Sequence<T>* set(int index, const T& item) = 0;
     virtual Sequence<T>* remove(int index) = 0;
     virtual Sequence<T>* insert_at(int index, const Sequence<T>* other_seq) = 0;
-    virtual T get(int index) const = 0;
+    virtual T& get(int index) const = 0;
     virtual T get_first() const = 0;
     virtual T get_last() const = 0;
     virtual int get_size() const = 0;
@@ -22,5 +22,5 @@ public:
     virtual Sequence<T>* map(std::function<T(T)> func) = 0;
     virtual Sequence<T>* reset() = 0;
 
-    virtual std::string to_string() const = 0;
+    // virtual std::string to_string() const = 0;
 };

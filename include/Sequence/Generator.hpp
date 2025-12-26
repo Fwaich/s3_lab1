@@ -1,5 +1,7 @@
 #pragma once
 #include"UniquePtr.hpp"
+#include"SharedPtr.hpp"
+#include"WeakPtr.hpp"
 
 template <typename T>
 class Lazy_Sequence;
@@ -10,7 +12,6 @@ class Generator
 public:
     virtual T get_next() = 0;
     virtual bool has_next() = 0;
-    virtual Unique_Ptr<Generator<T>> clone() const = 0;
     virtual ~Generator() = default;
 };
 
@@ -18,35 +19,31 @@ template <typename T>
 class Function_Generator : public Generator<T>
 {
 private: 
-    Array_Sequence<T> start_sequence;
-    Array_Sequence<T> args_buffer; //Ring_Buffer
+    Weak_Ptr<Lazy_Sequence<T>> owner;
     std::function<T(const Sequence<T>&)> rule;
-    size_t current_index;
+    size_t arity;
 
 public:
-    Function_Generator(const Sequence<T>& start_seq, std::function<T(const Array_Sequence<T>&)> rule)
-    : start_sequence(start_seq), args_buffer(start_seq) {
-
-        this->current_index = 0;
+    Function_Generator(Shared_Ptr<Lazy_Sequence<T>> gen_owner, size_t arity, std::function<T(const Sequence<T>&)> rule) 
+        : owner(gen_owner)
+    {
+        this->arity = arity;
         this->rule = rule;
     }
+    
+    ~Function_Generator() {}
 
     T get_next() override {
-        if (current_index < start_sequence.get_size())
-            return start_sequence.get(current_index++);
+        if (owner->get_materialized_count() <  arity)
+            throw std::runtime_error("Not enough elements to generate next");
 
+        Array_Sequence<T> args_buffer(arity);
+        size_t size = owner->get_materialized_count();
+        for (size_t i = 0; i < args_buffer.get_size(); i++) {
+            args_buffer.set(i, owner->get(size - 1 - i));
+        }
         T item = rule(args_buffer);
-        args_buffer.remove(0);
-        args_buffer.append(item);
-        current_index++;
-
         return item;
-    }
-
-    Unique_Ptr<Generator<T>> clone() const override {
-        return Unique_Ptr<Generator<T>>(
-            new Function_Generator<T>(start_sequence, rule)
-        );
     }
 
     bool has_next() {
@@ -63,18 +60,22 @@ private:
     size_t current_index;
 
 public:
-    Sequence_Generator(const Sequence<T>& seq) : sequence(seq), current_index(0) {} 
+    Sequence_Generator(const Array_Sequence<T>& seq)
+        : sequence(seq)
+    { 
+        this->current_index = 0;
+    } 
 
-    Sequence_Generator(const Array_Sequence<T>& seq) : sequence(seq), current_index(0) {} 
+    Sequence_Generator(const Array_Sequence<T>& seq, size_t current_index)
+        : sequence(seq)
+    { 
+        this->current_index = current_index;
+    } 
+
+    ~Sequence_Generator() {}
 
     T get_next() override {
         return sequence.get(current_index++);
-    }
-
-    Unique_Ptr<Generator<T>> clone() const override {
-        return Unique_Ptr<Generator<T>>(
-            new Sequence_Generator<T>(this->sequence)
-        );
     }
 
     bool has_next() override {
@@ -86,25 +87,22 @@ template <typename T>
 class Concat_Generator : public Generator<T> 
 {
 private:
-    Unique_Ptr<Generator<T>> first;
-    Unique_Ptr<Generator<T>> second;
+    Shared_Ptr<Generator<T>> first;
+    Shared_Ptr<Generator<T>> second;
 
 public:
-    Concat_Generator(Unique_Ptr<Generator<T>>&& first_generator, Unique_Ptr<Generator<T>>&& second_generator) {
-        this->first = std::move(first_generator);
-        this->second = std::move(second_generator);
+    Concat_Generator(Shared_Ptr<Generator<T>> first_generator, Shared_Ptr<Generator<T>> second_generator) {
+        this->first = first_generator;
+        this->second = second_generator;
     }
 
+    ~Concat_Generator() {
+        
+    }
 
     T get_next() override {
         if (!first->has_next()) return second->get_next();
         return first->get_next();
-    }
-
-    Unique_Ptr<Generator<T>> clone() const override {
-        return Unique_Ptr<Generator<T>>(
-            new Concat_Generator<T>(first->clone(), second->clone())
-        );
     }
 
     bool has_next() override {
@@ -131,6 +129,10 @@ public:
         this->current_index = current_index;
     }
 
+    ~Insert_Generator() {
+        
+    }
+
     T get_next() override {
         if (current_index >= insert_index - 1 && secondary->has_next()) {
             current_index++;
@@ -139,12 +141,6 @@ public:
         
         current_index++;
         return primary->get_next(); 
-    }
-
-    Unique_Ptr<Generator<T>> clone() const override {
-        return Unique_Ptr<Generator<T>>(
-            new Insert_Generator<T>(primary->clone(), secondary->clone(), insert_index, 0)
-        );
     }
 
     bool has_next() override {

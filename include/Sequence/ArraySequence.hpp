@@ -13,46 +13,85 @@ private:
 
 public:
     Array_Sequence() = default;
+    Array_Sequence(int initial_size);
+    Array_Sequence(const T* arr, int count);
+    Array_Sequence(const Array_Sequence<T>& other);
+    Array_Sequence(Array_Sequence<T>&& other) noexcept;
+    Array_Sequence(const Sequence<T>& seq);
+    ~Array_Sequence() override = default;
 
-    Array_Sequence(int initial_size) : array(initial_size) {} 
+    Array_Sequence<T>* append(const T& item) override;
+    Array_Sequence<T>* prepend(const T& item) override;
+    Array_Sequence<T>* set(int index, const T& item) override;
+    Array_Sequence<T>* remove(int index) override;
+    Array_Sequence<T>* insert_at(int index, const Sequence<T>* other_seq) override;
 
-    Array_Sequence(const T* arr, int count) : array(arr, count) {}
+    T& get(int index) const override;
+    T get_first() const override;
+    T get_last() const override;
 
-    Array_Sequence(const Array_Sequence<T>& other) : array(other.array) {}
+    int get_size() const override;
 
-    Array_Sequence(const Sequence<T>& seq) : array(seq.get_size()) {
+    Array_Sequence<T>* get_subsequence(int start_index, int end_index) const override;
+    Array_Sequence<T>* map(std::function<T(T)> func ) override;
+    Array_Sequence<T>* reset() override;
+
+    Array_Sequence<T>& operator=(const Array_Sequence<T>& other);
+    Array_Sequence<T>& operator=(Array_Sequence<T>&& other) noexcept;
+};
+
+    
+    template <typename T>
+    Array_Sequence<T>::Array_Sequence(int initial_size) : array(initial_size) {} 
+
+    template <typename T>
+    Array_Sequence<T>::Array_Sequence(const T* arr, int count) : array(arr, count) {}
+
+    template <typename T>
+    Array_Sequence<T>::Array_Sequence(const Array_Sequence<T>& other) : array(other.array) {}
+
+    template <typename T>
+    Array_Sequence<T>::Array_Sequence(Array_Sequence<T>&& other) noexcept
+    : array(std::move(other.array)) {} 
+
+    template <typename T>
+    Array_Sequence<T>::Array_Sequence(const Sequence<T>& seq) : array(seq.get_size()) {
         for (int i = 0; i < seq.get_size(); i++) {
             array.set(i, seq.get(i));
         }
     }
 
-    ~Array_Sequence() override = default;
-
-    Array_Sequence<T>* append(const T& item) override {
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::append(const T& item) {
         array.push_back(item);
         return this;
     }
 
-    Array_Sequence<T>* prepend(const T& item) override {
+    
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::prepend(const T& item) {
         array.push_front(item);
         return this;
     }
 
-    Array_Sequence<T>* set(int index, const T& item) override {
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::set(int index, const T& item) {
         array.set(index, item);
         return this;
     }
 
-    Array_Sequence<T>* remove(int index) override {
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::remove(int index) {
         for (int i = index; i < array.get_size() - 1; i++) {
             array.set(i, array.get(i + 1));
         }
-        
+
         array.resize(array.get_size() - 1);
         return this;
     }
 
-    Array_Sequence<T>* insert_at(int index, const Sequence<T>* other_seq) override {
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::insert_at(int index, const Sequence<T>* other_seq) {
         if (index < 0 || index > array.get_size()) {
             throw std::out_of_range("Index out of range");
         }
@@ -96,28 +135,33 @@ public:
         return this;
     }
 
-    T get(int index) const override {
+    template <typename T>
+    T& Array_Sequence<T>::get(int index) const {
         return array.get(index);
     }
 
-    T get_first() const override {
+    template <typename T>
+    T Array_Sequence<T>::get_first() const {
         if (array.get_size() == 0)
             throw std::runtime_error("Sequence is empty");
         return array.get(0);
     }
 
-    T get_last() const override {
+    template <typename T>
+    T Array_Sequence<T>::get_last() const {
         int vector_size = array.get_size();
         if (vector_size == 0)
             throw std::runtime_error("Sequence is empty");
         return array.get(vector_size - 1);
     }
 
-    int get_size() const override {
+    template <typename T>
+    int Array_Sequence<T>:: get_size() const {
         return array.get_size();
     }
 
-    Array_Sequence<T>* get_subsequence(int start_index, int end_index) const override {
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::get_subsequence(int start_index, int end_index) const {
         if (array.get_size() == 0)
             throw std::runtime_error("Sequence is empty");
 
@@ -135,32 +179,51 @@ public:
         return sub;
     }
 
-    Array_Sequence<T>* map(std::function<T(T)> func ) override {
-        Array_Sequence<T>* mapped_vector = new Array_Sequence<T>(array.get_size());
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::map(std::function<T(T)> func ) {
+        Array_Sequence<T>* mapped_array = new Array_Sequence<T>(array.get_size());
 
         for (int i = 0; i < array.get_size(); i++){
             T mapped_item = func(array.get(i));
-            mapped_vector->set(i, mapped_item);
+            mapped_array->set(i, mapped_item);
         }
 
-        return mapped_vector;
+        return mapped_array;
     }
 
-    Array_Sequence<T>* reset() override {
+    template <typename T>
+    Array_Sequence<T>* Array_Sequence<T>::reset() {
         array.reset();
 
         return this;
     }
 
-    //отдельный модуль за вывод
-    std::string to_string() const override {
-        std::ostringstream oss;
-        oss << "[";
-        for (int i = 0; i < array.get_size(); i++){
-            oss << array.get(i);
-            if (i + 1 < array.get_size())  oss << ", ";
+    template <typename T>
+    Array_Sequence<T>& Array_Sequence<T>::operator=(const Array_Sequence<T>& other) {
+        if (this != &other) {
+            array = other.array;  
         }
-        oss << "]";
-        return oss.str();
+        return *this;
     }
-};
+    
+    template <typename T>
+    Array_Sequence<T>& Array_Sequence<T>::operator=(Array_Sequence<T>&& other) noexcept {
+        if (this != &other) {
+            array = std::move(other.array);
+        }
+        return *this;
+    }
+
+    
+
+    //отдельный модуль за вывод
+    // std::string to_string() const override {
+    //     std::ostringstream oss;
+    //     oss << "[";
+    //     for (int i = 0; i < array.get_size(); i++){
+    //         oss << array.get(i);
+    //         if (i + 1 < array.get_size())  oss << ", ";
+    //     }
+    //     oss << "]";
+    //     return oss.str();
+    // }

@@ -1,7 +1,8 @@
 #include "Sequnces.hpp"
 #include "UniquePtr.hpp"
 #include "SharedPtr.hpp"
-#include "ReadOnlyStream.hpp"
+#include "exceptions.hpp"
+// #include "ReadOnlyStream.hpp"
 #include "Cardinal.hpp"
 #include <iostream>
 #include <memory>
@@ -99,31 +100,32 @@ auto fib = [](const Array_Sequence<int>& seq) -> int {
 
 void test_append() {
     // Sequence<int>* a = new Array_Sequence<int>;
-    // for (int i = 2; i <= 5; ++i) {
+    // for (int i = 2; i <= 15; ++i) {
     //     a->append(i);
     // }
 
-    Sequence<int>* b = new Array_Sequence<int>;
-    for (int i = -10; i <= -8; ++i) {
-        b->append(i);
-    }
+    // Sequence<int>* b = new Array_Sequence<int>;
+    // for (int i = -10; i <= -8; ++i) {
+    //     b->append(i);
+    // }
 
     Array_Sequence<int> ab = Array_Sequence<int>();
     for (int i = 0; i <= 1; ++i) {
         ab.append(i);
     }
-    auto l = Lazy_Sequence<int>(ab, fib);
-    auto l2 = Lazy_Sequence<int>(*b);
-    auto l3 = l.insert_at(2,l2);
+
+    auto l = Lazy_Sequence<int>::create(ab, 2, fib);
+    // auto l2 = Lazy_Sequence<int>(*b);
+    // auto l3 = l.insert_at(2,l2);
 
     int i = 0;
-    while(l3.has_next() && i < 10){
-        int item = l3.get(i++);
+    while(l->has_next() && i < 10){
+        int item = l->get(i++);
         std::cout << item << std::endl;
     }
 
     // delete a;
-    delete b;
+    // delete b;
 }
 
 void test_cardinal() {
@@ -142,7 +144,7 @@ void test_cardinal() {
 
 
 int main() {
-    try {
+    // try {
 
         // test_copy_sequence();
         // test_operator();
@@ -151,11 +153,11 @@ int main() {
         test_append();
         // test_cardinal();
 
-    } catch(const out_of_range& e){
-        std::cout << e.what() << std::endl; 
-    }  catch(const data_is_null& e){
-        std::cout << e.what() << std::endl; 
-    }
+    // } catch(const out_of_range& e){
+    //     std::cout << e.what() << std::endl; 
+    // }  catch(const data_is_null& e){
+    //     std::cout << e.what() << std::endl; 
+    // }
 
     return 0;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <type_traits>
+#include "EnableSharedFromThis.hpp"
 
 template<class T> class Weak_Ptr;
 
@@ -39,7 +40,10 @@ public:
         : ptr_(nullptr), ref_count(nullptr), weak_count(nullptr) {}
 
     explicit Shared_Ptr(T* ptr) noexcept
-        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0)) {}
+        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0)) 
+    {
+        enable_shared_from_this(ptr_);
+    }
 
     template<typename U>
     explicit Shared_Ptr(U* ptr) noexcept
@@ -47,6 +51,8 @@ public:
     {
         static_assert(std::is_convertible_v<U*, T*>,
                      "U* must be convertible to T*");
+
+        enable_shared_from_this(ptr_);
     }
 
     Shared_Ptr(const Shared_Ptr& other) noexcept
@@ -59,7 +65,7 @@ public:
     Shared_Ptr(const Shared_Ptr<U>& other) noexcept
         : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
     {
-        static_assert(std::is_base_of_v<U, T>,
+        static_assert(std::is_base_of_v<T, U>,
                      "U must be derived from T");
         if (ref_count) ++(*ref_count);
     }
@@ -76,13 +82,20 @@ public:
     Shared_Ptr(Shared_Ptr<U>&& other) noexcept
         : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
     {
-        static_assert(std::is_base_of_v<U, T>,
+        static_assert(std::is_base_of_v<T, U>,
                      "U must be derived from T");
 
         other.ptr_ = nullptr;
         other.ref_count = nullptr;
         other.weak_count = nullptr;
     }
+
+    explicit Shared_Ptr(const Weak_Ptr<T>& weak) noexcept
+        : ptr_(weak.ptr_), ref_count(weak.ref_count), weak_count(weak.weak_count)
+    {
+        if (ref_count) ++(*ref_count);
+    }
+
 
     ~Shared_Ptr() {
         cleanup();
@@ -102,7 +115,7 @@ public:
 
     template<typename U>
     Shared_Ptr& operator=(const Shared_Ptr<U>& other) noexcept {
-        static_assert(std::is_base_of_v<U, T>,
+        static_assert(std::is_base_of_v<T, U>,
                      "U must be derived from T");
         cleanup();
         ptr_ = other.ptr_;
@@ -128,7 +141,7 @@ public:
 
     template<typename U>
     Shared_Ptr& operator=(Shared_Ptr<U>&& other) noexcept {
-        static_assert(std::is_base_of_v<U, T>,
+        static_assert(std::is_base_of_v<T, U>,
                      "U must be derived from T");
         cleanup();
         ptr_ = other.ptr_;
@@ -161,6 +174,13 @@ public:
             ptr_ = ptr;
             ref_count = new size_t(1);
             weak_count = new size_t(0);
+        }
+    }
+
+    template<typename U>
+    void enable_shared_from_this(U* ptr) noexcept {
+        if constexpr (std::is_base_of_v<Enable_Shared_From_This<U>, U>) {
+            ptr->weak_this = *this;
         }
     }
 

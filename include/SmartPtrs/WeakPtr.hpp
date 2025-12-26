@@ -1,3 +1,8 @@
+#pragma once
+#include "SharedPtr.hpp"
+
+template<class T> class Shared_Ptr;
+
 template<class T>
 class Weak_Ptr 
 {
@@ -33,16 +38,16 @@ public:
     ~Weak_Ptr() {
         if (weak_count) {
             --(*weak_count);
-            if (*weak_count == 0 && ref_count && *ref_count == 0) {
-                delete weak_count;
-                delete ref_count;
-            }
+            // if (*weak_count == 0 && ref_count && *ref_count == 0) {
+            //     delete weak_count;
+            //     delete ref_count;
+            // }
         }
     }
 
     Weak_Ptr& operator=(const Weak_Ptr& other) noexcept {
         if (this != &other) {
-            this->~Weak_Ptr();
+            release();
             ptr_ = other.ptr_;
             ref_count = other.ref_count;
             weak_count = other.weak_count;
@@ -51,9 +56,11 @@ public:
         return *this;
     }
 
+
     Weak_Ptr& operator=(Weak_Ptr&& other) noexcept {
         if (this != &other) {
-            this->~Weak_Ptr();
+            release();
+
             ptr_ = other.ptr_;
             ref_count = other.ref_count;
             weak_count = other.weak_count;
@@ -65,6 +72,7 @@ public:
         return *this;
     }
 
+
     T* operator->() const noexcept { return ptr_; }
 
     bool expired() const noexcept {
@@ -74,6 +82,16 @@ public:
     Shared_Ptr<T> lock() const noexcept {
         return expired() ? Shared_Ptr<T>() : Shared_Ptr<T>(*this);
     }
+
+    void release() {
+        if (weak_count) {
+            --(*weak_count);
+        }
+        ptr_ = nullptr;
+        ref_count = nullptr;
+        weak_count = nullptr;
+    }
+
 
     int use_count() const noexcept {
         return ref_count ? int(*ref_count) : 0;
