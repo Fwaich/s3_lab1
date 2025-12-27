@@ -104,10 +104,10 @@ void test_append() {
     //     a->append(i);
     // }
 
-    // Sequence<int>* b = new Array_Sequence<int>;
-    // for (int i = -10; i <= -8; ++i) {
-    //     b->append(i);
-    // }
+    Array_Sequence<int> a = Array_Sequence<int>();
+    for (int i = -10; i <= -8; ++i) {
+        a.append(i);
+    }
 
     Array_Sequence<int> ab = Array_Sequence<int>();
     for (int i = 0; i <= 1; ++i) {
@@ -115,14 +115,27 @@ void test_append() {
     }
 
     auto l = Lazy_Sequence<int>::create(ab, 2, fib);
-    // auto l2 = Lazy_Sequence<int>(*b);
-    // auto l3 = l.insert_at(2,l2);
+    auto l2 = Lazy_Sequence<int>::create(a);
+    auto l3 = l->insert_at(2, l2);
 
     int i = 0;
+
     while(l->has_next() && i < 10){
         int item = l->get(i++);
         std::cout << item << std::endl;
     }
+
+        std::cout << std::endl;
+
+    i = 0;
+    while(l3->has_next() && i < 10){
+        int item = l3->get(i++);
+        std::cout << item << std::endl;
+    }
+
+    // int item = l3->get(i++);
+    // std::cout << item << std::endl;
+    
 
     // delete a;
     // delete b;
