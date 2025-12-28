@@ -155,12 +155,16 @@ public:
 
 };
 
-template<typename T, typename... Args>
-Unique_Ptr<T> make_unique(Args&&... args) {
-    return Unique_Ptr<T>(new T(std::forward<Args>(args)...));
-}
+namespace my {
+    
+    template<typename T, typename... Args>
+    Unique_Ptr<T> make_unique(Args&&... args) {
+        return Unique_Ptr<T>(new T(std::forward<Args>(args)...));
+    }
+    
+    template<typename T>
+    Unique_Ptr<T[]> make_unique(size_t size) {
+        return Unique_Ptr<T[]>(new T[size]);
+    }
 
-template<typename T>
-Unique_Ptr<T[]> make_unique(size_t size) {
-    return Unique_Ptr<T[]>(new T[size]);
 }

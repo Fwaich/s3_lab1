@@ -315,13 +315,18 @@ public:
     template<typename U> friend class Weak_Ptr;
 };
 
-template<typename T, typename... Args>
-Shared_Ptr<T> make_shared(Args&&... args) {
-    return Shared_Ptr<T>(new T(std::forward<Args>(args)...));
-}
 
-template<typename T>
-Shared_Ptr<T[]> make_shared(size_t size) {
-    return Shared_Ptr<T[]>(new T[size]);
+namespace my {
+    
+    template<typename T, typename... Args>
+    Shared_Ptr<T> make_shared(Args&&... args) {
+        return Shared_Ptr<T>(new T(std::forward<Args>(args)...));
+    }
+    
+    template<typename T>
+    Shared_Ptr<T[]> make_shared(size_t size) {
+        return Shared_Ptr<T[]>(new T[size]);
+    }
+
 }
 

@@ -12,27 +12,27 @@ template <typename T>
 class Lazy_Sequence : public Enable_Shared_From_This<Lazy_Sequence<T>>
 {
 private:
-    Shared_Ptr<Generator<T>> generator;
+    Unique_Ptr<Generator<T>> generator;
     Unique_Ptr<Array_Sequence<T>> materialized_data;
 
 private:
     void init_generator(size_t arity, std::function<T(const Array_Sequence<T>&)> rule) {
-        generator = ::make_shared<Function_Generator<T>>(
+        generator = my::make_unique<Function_Generator<T>>(
             this->shared_from_this(), arity, rule
         );
     }
    
 public:
     Lazy_Sequence(const Sequence<T>&  start_sequence, size_t arity, std::function<T(const Array_Sequence<T>&)> rule)
-        : materialized_data(make_unique<Array_Sequence<T>>(start_sequence)) {}
+        : materialized_data(my::make_unique<Array_Sequence<T>>(start_sequence)) {}
 
     Lazy_Sequence(const Sequence<T>& sequence){
-        this->materialized_data = make_unique<Array_Sequence<T>>();
-        this->generator = make_shared<Sequence_Generator<T>>(sequence);
+        this->materialized_data = my::make_unique<Array_Sequence<T>>();
+        this->generator = my::make_unique<Sequence_Generator<T>>(sequence);
     }
 
     Lazy_Sequence(Shared_Ptr<Generator<T>> gen) {
-        this->materialized_data = make_unique<Array_Sequence<T>>();
+        this->materialized_data = my::make_unique<Array_Sequence<T>>();
         this->generator = gen;
     }
     
@@ -53,10 +53,10 @@ public:
         );
     }
 
-    // Lazy_Sequence(Unique_Ptr<Generator<T>>&& gen) {
-    //     this->materialized_data = make_unique<Array_Sequence<T>>();
-    //     this->generator = std::move(gen);
-    // }
+    Lazy_Sequence(Unique_Ptr<Generator<T>>&& gen) {
+        this->materialized_data = my::make_unique<Array_Sequence<T>>();
+        this->generator = std::move(gen);
+    }
     
     T get(size_t index) {
         while (generator->has_next() && materialized_data->get_size() <= index) {
@@ -90,54 +90,54 @@ public:
     }
 
     Shared_Ptr<Lazy_Sequence<T>> append(Shared_Ptr<Lazy_Sequence<T>> items) {
-        auto append_generator = make_shared<Concat_Generator<T>>(
+        auto append_generator = my::make_unique<Concat_Generator<T>>(
             this->shared_from_this(), items
         );  
-        return make_shared<Lazy_Sequence<T>>(append_generator); 
+        return my::make_shared<Lazy_Sequence<T>>(std::move(append_generator)); 
     }
 
     Shared_Ptr<Lazy_Sequence<T>> prepend(Shared_Ptr<Lazy_Sequence<T>> items) {
-        auto prepend = make_shared<Concat_Generator<T>>(
+        auto prepend_generator = my::make_unique<Concat_Generator<T>>(
             items, this->shared_from_this()
         );  
-        return make_shared<Lazy_Sequence<T>>(prepend); 
+        return my::make_shared<Lazy_Sequence<T>>(std::move(prepend_generator)); 
     }
 
     Shared_Ptr<Lazy_Sequence<T>> insert_at(size_t insert_index, Shared_Ptr<Lazy_Sequence<T>>items) { 
-        auto insert_generator = make_shared<Insert_Generator<T>>(
+        auto insert_generator = my::make_unique<Insert_Generator<T>>(
             this->shared_from_this(), items,
             insert_index
         );
 
-        return make_shared<Lazy_Sequence<T>>(insert_generator);
+        return my::make_shared<Lazy_Sequence<T>>(std::move(insert_generator));
     }
 
     Shared_Ptr<Lazy_Sequence<T>> get_subsequence(size_t from_index, size_t to_index) { 
-        auto subsequence_generator = make_shared<Subsequence_Generator<T>>(
+        auto subsequence_generator = my::make_unique<Subsequence_Generator<T>>(
             this->shared_from_this(),
             from_index, to_index
         );
 
-        return make_shared<Lazy_Sequence<T>>(subsequence_generator);
+        return my::make_shared<Lazy_Sequence<T>>(std::move(subsequence_generator));
     }
 
     template <typename T2>
     Shared_Ptr<Lazy_Sequence<T>> map(std::function<T2(T)> func) { 
-        auto map_generator = ::make_shared<Map_Generator<T2, T>>(
+        auto map_generator = my::make_unique<Map_Generator<T2, T>>(
             this->shared_from_this(),
             func
         );
 
-        return make_shared<Lazy_Sequence<T2>>(map_generator);
+        return my::make_shared<Lazy_Sequence<T2>>(std::move(map_generator));
     }
 
     Shared_Ptr<Lazy_Sequence<T>> where(std::function<bool(T)> func) { 
-        auto where_generator = ::make_shared<Where_Generator<T>>(
+        auto where_generator = my::make_unique<Where_Generator<T>>(
             this->shared_from_this(),
             func
         );
 
-        return make_shared<Lazy_Sequence<T>>(where_generator);
+        return my::make_shared<Lazy_Sequence<T>>(std::move(where_generator));
     }
 
 };
