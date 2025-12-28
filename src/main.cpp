@@ -17,6 +17,21 @@ auto fib = [](const Array_Sequence<int>& seq) -> int {
     return seq.get(size - 1) + seq.get(size - 2);
 };
 
+auto x2 = [](const Array_Sequence<int>& seq) -> int {
+    size_t size = seq.get_size();
+    return seq.get(size - 1) * 2;
+};
+
+std::function<int(int)> map_x2 = [](int item) -> int {
+    return item*2;
+};
+
+std::function<bool(int)> where_div2 = [](int item) -> bool {
+    if (item % 2 == 0) return true;
+
+    return false;
+};
+
 // long long fib1 (Sequence<long long>* seq) {
 //     size_t size = seq->get_size();
 //     return seq->get(size - 1) + seq->get(size - 2);
@@ -116,7 +131,7 @@ void test_append() {
 
     auto l = Lazy_Sequence<int>::create(ab, 2, fib);
     auto l2 = Lazy_Sequence<int>::create(a);
-    auto l3 = l->insert_at(2, l2);
+    auto l3 = l->where(where_div2);
 
     int i = 0;
 

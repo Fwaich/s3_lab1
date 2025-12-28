@@ -21,8 +21,7 @@ private:
             this->shared_from_this(), arity, rule
         );
     }
-
-    
+   
 public:
     Lazy_Sequence(const Sequence<T>&  start_sequence, size_t arity, std::function<T(const Array_Sequence<T>&)> rule)
         : materialized_data(make_unique<Array_Sequence<T>>(start_sequence)) {}
@@ -82,6 +81,10 @@ public:
         return materialized_data->get_last();
     }
 
+    size_t get_materialized_count() const {
+        return materialized_data->get_size();
+    }
+
     bool has_next() const {
         return generator->has_next();
     }
@@ -109,8 +112,32 @@ public:
         return make_shared<Lazy_Sequence<T>>(insert_generator);
     }
 
-    size_t get_materialized_count() const {
-        return materialized_data->get_size();
+    Shared_Ptr<Lazy_Sequence<T>> get_subsequence(size_t from_index, size_t to_index) { 
+        auto subsequence_generator = make_shared<Subsequence_Generator<T>>(
+            this->shared_from_this(),
+            from_index, to_index
+        );
+
+        return make_shared<Lazy_Sequence<T>>(subsequence_generator);
+    }
+
+    template <typename T2>
+    Shared_Ptr<Lazy_Sequence<T>> map(std::function<T2(T)> func) { 
+        auto map_generator = ::make_shared<Map_Generator<T2, T>>(
+            this->shared_from_this(),
+            func
+        );
+
+        return make_shared<Lazy_Sequence<T2>>(map_generator);
+    }
+
+    Shared_Ptr<Lazy_Sequence<T>> where(std::function<bool(T)> func) { 
+        auto where_generator = ::make_shared<Where_Generator<T>>(
+            this->shared_from_this(),
+            func
+        );
+
+        return make_shared<Lazy_Sequence<T>>(where_generator);
     }
 
 };

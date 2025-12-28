@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include"UniquePtr.hpp"
 #include"SharedPtr.hpp"
 #include"WeakPtr.hpp"
@@ -39,8 +40,8 @@ public:
 
         Array_Sequence<T> args_buffer(arity);
         size_t size = owner->get_materialized_count();
-        for (size_t i = 0; i < args_buffer.get_size(); i++) {
-            args_buffer.set(i, owner->get(size - 1 - i));
+        for (size_t i = 0; i < arity; i++) {
+            args_buffer.set(i, owner->get(size - arity + i));
         }
         T item = rule(args_buffer);
         return item;
@@ -93,20 +94,6 @@ private:
     size_t first_index;
     size_t second_index;
 
-    bool first_is_empty;
-    bool second_is_empty;
-
-private:
-
-    bool is_border_reached(const Shared_Ptr<Lazy_Sequence<T>>& seq, size_t index, bool& is_empty) {
-        if (!is_empty && index >= seq->get_materialized_count()) {
-            is_empty = true;
-            return true;
-        }
-        return is_empty;
-    }
-
-
 public:
     Concat_Generator(Shared_Ptr<Lazy_Sequence<T>> first_seq, Shared_Ptr<Lazy_Sequence<T>> second_seq) {
         this->first = first_seq;
@@ -114,27 +101,27 @@ public:
 
         this->first_index = 0;
         this->second_index = 0;
-
-        this->first_is_empty = false;
-        this->second_is_empty = false;
     }
 
     ~Concat_Generator() {}
 
     T get_next() override {
-        if (!is_border_reached(first, first_index, first_is_empty)) 
+        bool can_use_first = first->has_next() || first_index < first->get_materialized_count();
+        bool can_use_second = second->has_next() || second_index < second->get_materialized_count();
+
+        if (can_use_first) 
             return first->get(first_index++);
-        if (first->has_next()) return first->get_next();
  
-        if (!is_border_reached(second, second_index, second_is_empty)) 
+        if (can_use_second) 
             return second->get(second_index++);
-        if (second->has_next()) return second->get_next();
 
         throw std::runtime_error("Generation limit reached");
     }
 
     bool has_next() override {
-        return first->has_next() || second->has_next();
+        bool can_use_first = first->has_next() || first_index < first->get_materialized_count();
+        bool can_use_second = second->has_next() || second_index < second->get_materialized_count();
+        return can_use_first || can_use_second;
     }
 };
 
@@ -145,23 +132,11 @@ private:
     Shared_Ptr<Lazy_Sequence<T>> primary;
     Shared_Ptr<Lazy_Sequence<T>> secondary;
 
-    size_t current_index;
-    size_t insert_index;
-
     size_t primary_index;
     size_t secondary_index;
 
-    bool primary_is_empty;
-    bool secondary_is_empty;
-
-private:
-    bool is_border_reached(const Shared_Ptr<Lazy_Sequence<T>>& seq, size_t index, bool& is_empty) {
-        if (!is_empty && index >= seq->get_materialized_count()) {
-            is_empty = true;
-            return true;
-        }
-        return is_empty;
-    }
+    size_t current_index;
+    size_t insert_index;
 
 public:
     Insert_Generator(Shared_Ptr<Lazy_Sequence<T>> primary_seq, Shared_Ptr<Lazy_Sequence<T>> secondary_seq, 
@@ -170,32 +145,150 @@ public:
         this->primary = primary_seq;
         this->secondary = secondary_seq;
         
-        this->insert_index = insert_index;
-        this->current_index = 0;
         this->primary_index = 0;
         this->secondary_index = 0;
 
-        this->primary_is_empty = false;
-        this->secondary_is_empty = false;
+        this->insert_index = insert_index;
+        this->current_index = 0;
     }
 
     ~Insert_Generator() {}
 
     T get_next() override {
-        if ((current_index >= insert_index - 1) && (secondary->has_next() || !secondary_is_empty)) {
+        bool can_use_primary = primary->has_next() || primary_index < primary->get_materialized_count();
+        bool can_use_secondary = secondary->has_next() || secondary_index < secondary->get_materialized_count();
+
+        if (current_index >= insert_index - 1 && can_use_secondary) {
             current_index++;
-            if (!is_border_reached(secondary, secondary_index, secondary_is_empty)) 
-                return secondary->get(secondary_index++);
-            return secondary->get_next();
+            return secondary->get(secondary_index++);
         }
         
         current_index++;
-        if (!is_border_reached(primary, primary_index, primary_is_empty)) 
+        if (can_use_primary) 
             return primary->get(primary_index++);
-        return primary->get_next(); 
+
+        throw std::runtime_error("Generation limit reached");
     }
 
     bool has_next() override {
-        return primary->has_next() || secondary->has_next();
+        bool can_use_primary = primary->has_next() || primary_index < primary->get_materialized_count();
+        bool can_use_secondary = secondary->has_next() || secondary_index < secondary->get_materialized_count();
+        return can_use_primary || can_use_secondary;
+    }
+};
+
+template <typename T>
+class Subsequence_Generator : public Generator<T> 
+{
+private:
+    Shared_Ptr<Lazy_Sequence<T>> sequence;
+
+    size_t current_index;
+    size_t from_index;
+    size_t to_index;
+
+public:
+    Subsequence_Generator(Shared_Ptr<Lazy_Sequence<T>> seq, size_t from_index, size_t to_index) 
+    {
+        this->sequence = seq;
+
+        this->current_index = from_index;
+        this->from_index = from_index;
+        this->to_index = to_index;
+    }
+
+    ~Subsequence_Generator() {}
+
+    T get_next() override {
+        if (this->has_next())
+            return sequence->get(current_index++);
+
+        throw std::runtime_error("Generation limit reached");
+    }
+
+    bool has_next() override {
+        bool can_use_seq = sequence->has_next() || current_index < sequence->get_materialized_count();
+        return (current_index >= from_index && current_index <= to_index) && can_use_seq;
+    }
+};
+
+template <typename TOut, typename TIn>
+class Map_Generator : public Generator<TOut> 
+{
+private:
+    Shared_Ptr<Lazy_Sequence<TIn>> sequence;
+    size_t current_index;
+
+    std::function<TOut(TIn)> func;
+
+public:
+    Map_Generator(Shared_Ptr<Lazy_Sequence<TIn>> seq, std::function<TOut(TIn)> func) 
+    {
+        this->sequence = seq;
+        this->current_index = 0;
+
+        this->func = func;
+    }
+
+    ~Map_Generator() {}
+
+    TOut get_next() override {
+        if (this->has_next())
+            return func(sequence->get(current_index++));
+
+        throw std::runtime_error("Generation limit reached");
+    }
+
+    bool has_next() override {
+        bool can_use_seq = sequence->has_next() || current_index < sequence->get_materialized_count();
+        return can_use_seq;
+    }
+};
+
+template <typename T>
+class Where_Generator : public Generator<T> 
+{
+private:
+    Shared_Ptr<Lazy_Sequence<T>> sequence;
+    size_t current_index;
+
+    std::optional<T> cached_item;
+    std::function<bool(T)> func;
+
+public:
+    Where_Generator(Shared_Ptr<Lazy_Sequence<T>> seq, std::function<bool(T)> func) 
+    {
+        this->sequence = seq;
+        this->current_index = 0;
+
+        this->cached_item = std::nullopt;
+        this->func = func;
+    }
+    
+    T get_next() override {
+        if (this->has_next()) {
+            T result = *cached_item;
+            cached_item.reset();
+            return result;
+        }
+        
+        throw std::runtime_error("Generation limit reached");
+    }
+    
+    bool has_next() override {  //ограничить?
+        if (cached_item.has_value())
+            return true;
+
+        while (sequence->has_next() || current_index < sequence->get_materialized_count()) {
+
+            T item = sequence->get(current_index++);
+
+            if (func(item)) {
+                cached_item = item;
+                return true;
+            }
+        }
+
+        return false;
     }
 };

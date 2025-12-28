@@ -192,9 +192,17 @@ public:
     }
 
     void swap(Shared_Ptr& other) noexcept {
-        std::swap(ptr_, other.ptr_);
-        std::swap(ref_count, other.ref_count);
-        std::swap(weak_count, other.weak_count);
+        T* temp_ptr = ptr_;
+        ptr_ = other.ptr_;
+        other.ptr_ = temp_ptr;
+        
+        size_t temp_ref = ref_count;
+        ref_count = other.ref_count;
+        other.ref_count = temp_ref;
+        
+        size_t temp_weak = weak_count;
+        weak_count = other.weak_count;
+        other.weak_count = temp_weak;
     }
 
     template<typename U> friend class Shared_Ptr;
