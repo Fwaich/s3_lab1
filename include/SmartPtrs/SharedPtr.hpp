@@ -21,7 +21,7 @@ private:
                 delete ptr_;
                 ptr_ = nullptr;
 
-                if (weak_count && *weak_count == 0) {
+                if (weak_count && *weak_count == 0) { //утечет если сначала удалить shared_ptr
                     delete ref_count;
                     delete weak_count;
                     ref_count = nullptr;
@@ -33,6 +33,13 @@ private:
 
     Shared_Ptr(T* p, size_t* rc, size_t* wc) noexcept
         : ptr_(p), ref_count(rc), weak_count(wc) {}
+
+        template<typename U>
+    void enable_shared_from_this(U* ptr) noexcept {
+        if constexpr (std::is_base_of_v<Enable_Shared_From_This<U>, U>) {
+            ptr->weak_this = *this;
+        }
+    }
 
 public:
 
@@ -177,12 +184,7 @@ public:
         }
     }
 
-    template<typename U>
-    void enable_shared_from_this(U* ptr) noexcept {
-        if constexpr (std::is_base_of_v<Enable_Shared_From_This<U>, U>) {
-            ptr->weak_this = *this;
-        }
-    }
+
 
     template<typename U>
     void reset(U* ptr) noexcept {
@@ -317,7 +319,7 @@ public:
 
 
 namespace my {
-    
+
     template<typename T, typename... Args>
     Shared_Ptr<T> make_shared(Args&&... args) {
         return Shared_Ptr<T>(new T(std::forward<Args>(args)...));

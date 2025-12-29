@@ -56,10 +56,4 @@ public:
         return Cardinal(std::get<finite>(value) + std::get<finite>(other.value));
     }
 
-    // friend std::ostream& operator<<(std::ostream& os, const Cardinal& c) {
-    //     if (c.is_infinite()) os << "ℵ₀";
-    //     else os << std::get<finite>(c.value);
-    //     return os;
-    // }
-
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+#include "ArraySequence.hpp"
 #include"UniquePtr.hpp"
 #include"SharedPtr.hpp"
 #include"WeakPtr.hpp"
@@ -20,7 +21,7 @@ template <typename T>
 class Function_Generator : public Generator<T>
 {
 private: 
-    Weak_Ptr<Lazy_Sequence<T>> owner;
+    Weak_Ptr<Lazy_Sequence<T>> owner; 
     std::function<T(const Sequence<T>&)> rule;
     size_t arity;
 
@@ -48,7 +49,7 @@ public:
     }
 
     bool has_next() {
-        return true;
+        return owner->get_materialized_count() >= arity;
     }
 
 };
@@ -106,8 +107,8 @@ public:
     ~Concat_Generator() {}
 
     T get_next() override {
-        bool can_use_first = first->has_next() || first_index < first->get_materialized_count();
-        bool can_use_second = second->has_next() || second_index < second->get_materialized_count();
+        bool can_use_first = first_index < first->get_materialized_count() || first->has_next();
+        bool can_use_second = second_index < second->get_materialized_count() || second->has_next();
 
         if (can_use_first) 
             return first->get(first_index++);
@@ -129,24 +130,24 @@ template <typename T>
 class Insert_Generator : public Generator<T> 
 {
 private:
-    Shared_Ptr<Lazy_Sequence<T>> primary;
-    Shared_Ptr<Lazy_Sequence<T>> secondary;
+    Shared_Ptr<Lazy_Sequence<T>> initial;
+    Shared_Ptr<Lazy_Sequence<T>> added;
 
-    size_t primary_index;
-    size_t secondary_index;
+    size_t initial_index;
+    size_t added_index;
 
     size_t current_index;
     size_t insert_index;
 
 public:
-    Insert_Generator(Shared_Ptr<Lazy_Sequence<T>> primary_seq, Shared_Ptr<Lazy_Sequence<T>> secondary_seq, 
+    Insert_Generator(Shared_Ptr<Lazy_Sequence<T>> initial_seq, Shared_Ptr<Lazy_Sequence<T>> added_seq, 
         size_t insert_index) 
     {
-        this->primary = primary_seq;
-        this->secondary = secondary_seq;
+        this->initial = initial_seq;
+        this->added = added_seq;
         
-        this->primary_index = 0;
-        this->secondary_index = 0;
+        this->initial_index = 0;
+        this->added_index = 0;
 
         this->insert_index = insert_index;
         this->current_index = 0;
@@ -155,25 +156,25 @@ public:
     ~Insert_Generator() {}
 
     T get_next() override {
-        bool can_use_primary = primary->has_next() || primary_index < primary->get_materialized_count();
-        bool can_use_secondary = secondary->has_next() || secondary_index < secondary->get_materialized_count();
+        bool can_use_initial = initial->has_next() || initial_index < initial->get_materialized_count();
+        bool can_use_added = added->has_next() || added_index < added->get_materialized_count();
 
-        if (current_index >= insert_index - 1 && can_use_secondary) {
+        if (current_index >= insert_index - 1 && can_use_added) {
             current_index++;
-            return secondary->get(secondary_index++);
+            return added->get(added_index++);
         }
         
         current_index++;
-        if (can_use_primary) 
-            return primary->get(primary_index++);
+        if (can_use_initial) 
+            return initial->get(initial_index++);
 
         throw std::runtime_error("Generation limit reached");
     }
 
     bool has_next() override {
-        bool can_use_primary = primary->has_next() || primary_index < primary->get_materialized_count();
-        bool can_use_secondary = secondary->has_next() || secondary_index < secondary->get_materialized_count();
-        return can_use_primary || can_use_secondary;
+        bool can_use_initial = initial->has_next() || initial_index < initial->get_materialized_count();
+        bool can_use_added = added->has_next() || added_index < added->get_materialized_count();
+        return can_use_initial || can_use_added;
     }
 };
 
@@ -219,10 +220,10 @@ private:
     Shared_Ptr<Lazy_Sequence<TIn>> sequence;
     size_t current_index;
 
-    std::function<TOut(TIn)> func;
+    std::function<TOut(const TIn&)> func;
 
 public:
-    Map_Generator(Shared_Ptr<Lazy_Sequence<TIn>> seq, std::function<TOut(TIn)> func) 
+    Map_Generator(Shared_Ptr<Lazy_Sequence<TIn>> seq, std::function<TOut(const TIn&)> func) //TIn по ссылке
     {
         this->sequence = seq;
         this->current_index = 0;
@@ -253,10 +254,10 @@ private:
     size_t current_index;
 
     std::optional<T> cached_item;
-    std::function<bool(T)> func;
+    std::function<bool(const T&)> func;
 
 public:
-    Where_Generator(Shared_Ptr<Lazy_Sequence<T>> seq, std::function<bool(T)> func) 
+    Where_Generator(Shared_Ptr<Lazy_Sequence<T>> seq, std::function<bool(const T&)> func) 
     {
         this->sequence = seq;
         this->current_index = 0;
@@ -275,7 +276,7 @@ public:
         throw std::runtime_error("Generation limit reached");
     }
     
-    bool has_next() override {  //ограничить?
+    bool has_next() override {
         if (cached_item.has_value())
             return true;
 

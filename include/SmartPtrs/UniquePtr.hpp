@@ -5,7 +5,7 @@ template<class T>
 class Unique_Ptr 
 {
 private:
-    T* ptr_;
+    T* ptr_; //поменять в smart_ptrs названия_ идентифекаторов_ 
 
 public:
     explicit Unique_Ptr(T* ptr = nullptr) noexcept : ptr_(ptr) {};
@@ -156,7 +156,7 @@ public:
 };
 
 namespace my {
-    
+
     template<typename T, typename... Args>
     Unique_Ptr<T> make_unique(Args&&... args) {
         return Unique_Ptr<T>(new T(std::forward<Args>(args)...));

@@ -16,24 +16,26 @@ private:
     Unique_Ptr<Array_Sequence<T>> materialized_data;
 
 private:
-    void init_generator(size_t arity, std::function<T(const Array_Sequence<T>&)> rule) {
+    void init_function_generator(size_t arity, std::function<T(const Sequence<T>&)> rule) {
         generator = my::make_unique<Function_Generator<T>>(
             this->shared_from_this(), arity, rule
         );
     }
    
 public:
-    Lazy_Sequence(const Sequence<T>&  start_sequence, size_t arity, std::function<T(const Array_Sequence<T>&)> rule)
+    Lazy_Sequence(const Sequence<T>& start_sequence, size_t arity, std::function<T(const Sequence<T>&)> rule)
         : materialized_data(my::make_unique<Array_Sequence<T>>(start_sequence)) {}
 
-    Lazy_Sequence(const Sequence<T>& sequence){
+    Lazy_Sequence(const Sequence<T>& sequence)
+    {
         this->materialized_data = my::make_unique<Array_Sequence<T>>();
         this->generator = my::make_unique<Sequence_Generator<T>>(sequence);
     }
 
-    Lazy_Sequence(Shared_Ptr<Generator<T>> gen) {
+    Lazy_Sequence(Unique_Ptr<Generator<T>>&& gen) 
+    {
         this->materialized_data = my::make_unique<Array_Sequence<T>>();
-        this->generator = gen;
+        this->generator = std::move(gen);
     }
     
     static Shared_Ptr<Lazy_Sequence<T>> create(const Sequence<T>&  start_sequence,
@@ -42,7 +44,7 @@ public:
         auto l = Shared_Ptr<Lazy_Sequence<T>>(
             new Lazy_Sequence<T>(start_sequence, arity, rule)
         );
-        l->init_generator(arity, rule);
+        l->init_function_generator(arity, rule);
         return l;
     }
 
@@ -53,13 +55,8 @@ public:
         );
     }
 
-    Lazy_Sequence(Unique_Ptr<Generator<T>>&& gen) {
-        this->materialized_data = my::make_unique<Array_Sequence<T>>();
-        this->generator = std::move(gen);
-    }
-    
     T get(size_t index) {
-        while (generator->has_next() && materialized_data->get_size() <= index) {
+        while (materialized_data->get_size() <= index && generator->has_next()) {
             materialized_data->append(generator->get_next());
         }
 
@@ -122,7 +119,7 @@ public:
     }
 
     template <typename T2>
-    Shared_Ptr<Lazy_Sequence<T>> map(std::function<T2(T)> func) { 
+    Shared_Ptr<Lazy_Sequence<T>> map(std::function<T2(const T&)> func) { 
         auto map_generator = my::make_unique<Map_Generator<T2, T>>(
             this->shared_from_this(),
             func
@@ -138,6 +135,10 @@ public:
         );
 
         return my::make_shared<Lazy_Sequence<T>>(std::move(where_generator));
+    }
+
+    Shared_Ptr<Lazy_Sequence<T>> set_generator(Unique_Ptr<Generator<T>> generator) { 
+        return my::make_shared<Lazy_Sequence<T>>(std::move(generator));
     }
 
 };
