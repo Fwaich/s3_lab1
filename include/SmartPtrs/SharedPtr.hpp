@@ -16,18 +16,20 @@ private:
 private:// не трогать release()
     void release() noexcept {
         if (!control) return;
-        control->increase_weak(); //защита если ptr унаследован от enable_shared_from_this
+        // control->increase_weak(); //защита если ptr унаследован от enable_shared_from_this
 
         control->decrease_strong();
+        bool no_strong = !control->has_strong();
+        bool no_weak = !control->has_weak();
 
-        if (!control->has_strong()) {
+        if (no_strong) {
             delete ptr;
             ptr = nullptr;
 
         }
 
-        control->decrease_weak(); //защита если ptr унаследован от enable_shared_from_this
-        if (!control->has_weak() && !control->has_strong()) {
+        // control->decrease_weak(); //защита если ptr унаследован от enable_shared_from_this
+        if (no_strong && no_weak) {
             delete control;
         }
 
