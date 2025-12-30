@@ -1,320 +1,187 @@
 #pragma once
 #include <type_traits>
+#include <utility>
+#include <cstddef>
 #include "EnableSharedFromThis.hpp"
 
 template<class T> class Weak_Ptr;
 
+class ControlBlock {
+public:
+    ControlBlock()
+        : strong_refs(0), weak_refs(0) {}
+
+    ControlBlock(size_t strong, size_t weak)
+        : strong_refs(strong), weak_refs(weak) {}
+
+    ~ControlBlock() = default;
+
+public:
+    size_t strong() const noexcept { return strong_refs; }
+    size_t weak()   const noexcept { return weak_refs; }
+
+    bool has_strong() const noexcept { return strong_refs != 0; }
+    bool has_weak()   const noexcept { return weak_refs != 0; }
+
+    void increase_strong() noexcept { ++strong_refs; }
+    void increase_weak()   noexcept { ++weak_refs;   }
+
+    void decrease_strong() noexcept { --strong_refs; }
+    void decrease_weak()   noexcept { --weak_refs;   }
+
+private:
+    size_t strong_refs;
+    size_t weak_refs;
+};
+
+template<class T> class Weak_Ptr;
+
 template<class T>
-class Shared_Ptr 
-{
+class Shared_Ptr {
 private:
-    T* ptr_;
-    size_t* ref_count;
-    size_t* weak_count;
+    T* ptr = nullptr;
+    ControlBlock* control = nullptr;
 
 private:
-    void cleanup() {
-        if (ref_count) {
-            --(*ref_count);
+    void release() noexcept {
+        if (!control) return;
+        control->increase_weak();
 
-            if (*ref_count == 0) {
-                delete ptr_;
-                ptr_ = nullptr;
+        control->decrease_strong();
 
-                if (weak_count && *weak_count == 0) { //утечет если сначала удалить shared_ptr
-                    delete ref_count;
-                    delete weak_count;
-                    ref_count = nullptr;
-                    weak_count = nullptr;
-                }
-            }
+        if (!control->has_strong()) {
+            delete ptr;
+            ptr = nullptr;
+
         }
+
+        control->decrease_weak();
+        if (!control->has_weak()) {
+            delete control;
+        }
+
+        control = nullptr;
     }
 
-    Shared_Ptr(T* p, size_t* rc, size_t* wc) noexcept
-        : ptr_(p), ref_count(rc), weak_count(wc) {}
-
-        template<typename U>
-    void enable_shared_from_this(U* ptr) noexcept {
+    template<typename U>
+    void enable_shared_from_this(U* p) noexcept {
         if constexpr (std::is_base_of_v<Enable_Shared_From_This<U>, U>) {
-            ptr->weak_this = *this;
+            p->weak_this = *this;
         }
     }
 
 public:
+    /* constructors */
 
-    Shared_Ptr() noexcept
-        : ptr_(nullptr), ref_count(nullptr), weak_count(nullptr) {}
+    Shared_Ptr() noexcept = default;
 
-    explicit Shared_Ptr(T* ptr) noexcept
-        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0)) 
+    explicit Shared_Ptr(T* p)
+        : ptr(p), control(new ControlBlock(1, 0))
     {
-        enable_shared_from_this(ptr_);
-    }
-
-    template<typename U>
-    explicit Shared_Ptr(U* ptr) noexcept
-        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0))
-    {
-        static_assert(std::is_convertible_v<U*, T*>,
-                     "U* must be convertible to T*");
-
-        enable_shared_from_this(ptr_);
+        enable_shared_from_this(p);
     }
 
     Shared_Ptr(const Shared_Ptr& other) noexcept
-        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+        : ptr(other.ptr), control(other.control)
     {
-        if (ref_count) ++(*ref_count);
+        if (control) {
+            control->increase_strong();
+        }
     }
 
     template<typename U>
     Shared_Ptr(const Shared_Ptr<U>& other) noexcept
-        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+        : ptr(other.ptr), control(other.control)
     {
         static_assert(std::is_base_of_v<T, U>,
-                     "U must be derived from T");
-        if (ref_count) ++(*ref_count);
+                      "U must be derived from T");
+        if (control) {
+            control->increase_strong();
+        }
     }
 
     Shared_Ptr(Shared_Ptr&& other) noexcept
-        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
+        : ptr(other.ptr), control(other.control)
     {
-        other.ptr_ = nullptr;
-        other.ref_count = nullptr;
-        other.weak_count = nullptr;
-    }
-
-    template<typename U>
-    Shared_Ptr(Shared_Ptr<U>&& other) noexcept
-        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
-    {
-        static_assert(std::is_base_of_v<T, U>,
-                     "U must be derived from T");
-
-        other.ptr_ = nullptr;
-        other.ref_count = nullptr;
-        other.weak_count = nullptr;
+        other.ptr = nullptr;
+        other.control = nullptr;
     }
 
     explicit Shared_Ptr(const Weak_Ptr<T>& weak) noexcept
-        : ptr_(weak.ptr_), ref_count(weak.ref_count), weak_count(weak.weak_count)
+        : ptr(weak.ptr), control(weak.control)
     {
-        if (ref_count) ++(*ref_count);
+        if (control) {
+            control->increase_strong();
+        }
     }
 
+    /* destructor */
 
     ~Shared_Ptr() {
-        cleanup();
+        release();
     }
+
+    /* assignment */
 
     Shared_Ptr& operator=(const Shared_Ptr& other) noexcept {
         if (this != &other) {
-            cleanup();
-            ptr_ = other.ptr_;
-            ref_count = other.ref_count;
-            weak_count = other.weak_count;
-
-            if (ref_count) ++(*ref_count);
-        }
-        return *this;
-    }
-
-    template<typename U>
-    Shared_Ptr& operator=(const Shared_Ptr<U>& other) noexcept {
-        static_assert(std::is_base_of_v<T, U>,
-                     "U must be derived from T");
-        cleanup();
-        ptr_ = other.ptr_;
-        ref_count = other.ref_count;
-        weak_count = other.weak_count;
-        if (ref_count) ++(*ref_count);
-        return *this;
-    }
-
-    Shared_Ptr& operator=(Shared_Ptr&& other) noexcept {
-        if (this != &other) {
-            cleanup();
-            ptr_ = other.ptr_;
-            ref_count = other.ref_count;
-            weak_count = other.weak_count;
-
-            other.ptr_ = nullptr;
-            other.ref_count = nullptr;
-            other.weak_count = nullptr;
-        }
-        return *this;
-    }
-
-    template<typename U>
-    Shared_Ptr& operator=(Shared_Ptr<U>&& other) noexcept {
-        static_assert(std::is_base_of_v<T, U>,
-                     "U must be derived from T");
-        cleanup();
-        ptr_ = other.ptr_;
-        ref_count = other.ref_count;
-        weak_count = other.weak_count;
-
-        other.ptr_ = nullptr;
-        other.ref_count = nullptr;
-        other.weak_count = nullptr;
-
-        return *this;
-    }
-
-    T* get() const noexcept { return ptr_; }
-    T& operator*()  const noexcept { return *ptr_; }
-    T* operator->() const noexcept { return ptr_; }
-
-    explicit operator bool() const noexcept { return ptr_ != nullptr; }
-
-    int use_count() const noexcept { return ref_count ? int(*ref_count) : 0; }
-    bool unique() const noexcept { return use_count() == 1; }
-
-    void reset(T* ptr = nullptr) noexcept {
-        cleanup();
-        if (!ptr) {
-            ptr_ = nullptr;
-            ref_count = nullptr;
-            weak_count = nullptr;
-        } else {
-            ptr_ = ptr;
-            ref_count = new size_t(1);
-            weak_count = new size_t(0);
-        }
-    }
-
-
-
-    template<typename U>
-    void reset(U* ptr) noexcept {
-        static_assert(std::is_base_of_v<U, T>,
-                     "U must be derived from T");
-        reset(static_cast<T*>(ptr));
-    }
-
-    void swap(Shared_Ptr& other) noexcept {
-        T* temp_ptr = ptr_;
-        ptr_ = other.ptr_;
-        other.ptr_ = temp_ptr;
-        
-        size_t temp_ref = ref_count;
-        ref_count = other.ref_count;
-        other.ref_count = temp_ref;
-        
-        size_t temp_weak = weak_count;
-        weak_count = other.weak_count;
-        other.weak_count = temp_weak;
-    }
-
-    template<typename U> friend class Shared_Ptr;
-    template<typename U> friend class Weak_Ptr;
-};
-
-template<class T>
-class Shared_Ptr<T[]> 
-{
-private:
-    T* ptr_;
-    size_t* ref_count;
-    size_t* weak_count;
-
-private:
-    void cleanup() {
-        if (ref_count) {
-            --(*ref_count);
-
-            if (*ref_count == 0) {
-                delete[] ptr_;
-                ptr_ = nullptr;
-
-                if (weak_count && *weak_count == 0) {
-                    delete ref_count;
-                    delete weak_count;
-                    ref_count = nullptr;
-                    weak_count = nullptr;
-                }
+            release();
+            ptr = other.ptr;
+            control = other.control;
+            if (control) {
+                control->increase_strong();
             }
         }
-    }
-
-public:
-    Shared_Ptr() noexcept
-        : ptr_(nullptr), ref_count(nullptr), weak_count(nullptr) {}
-
-    explicit Shared_Ptr(T* ptr) noexcept
-        : ptr_(ptr), ref_count(new size_t(1)), weak_count(new size_t(0)) {}
-
-    Shared_Ptr(const Shared_Ptr& other) noexcept
-        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
-    {
-        if (ref_count) ++(*ref_count);
-    }
-
-    Shared_Ptr(Shared_Ptr&& other) noexcept
-        : ptr_(other.ptr_), ref_count(other.ref_count), weak_count(other.weak_count)
-    {
-        other.ptr_ = nullptr;
-        other.ref_count = nullptr;
-        other.weak_count = nullptr;
-    }
-
-    ~Shared_Ptr() {
-        cleanup();
-    }
-
-    Shared_Ptr& operator=(const Shared_Ptr& other) noexcept {
-        if (this != &other) {
-            cleanup();
-            ptr_ = other.ptr_;
-            ref_count = other.ref_count;
-            weak_count = other.weak_count;
-            if (ref_count) ++(*ref_count);
-        }
         return *this;
     }
 
     Shared_Ptr& operator=(Shared_Ptr&& other) noexcept {
         if (this != &other) {
-            cleanup();
-            ptr_ = other.ptr_;
-            ref_count = other.ref_count;
-            weak_count = other.weak_count;
-
-            other.ptr_ = nullptr;
-            other.ref_count = nullptr;
-            other.weak_count = nullptr;
+            release();
+            ptr = other.ptr;
+            control = other.control;
+            other.ptr = nullptr;
+            other.control = nullptr;
         }
         return *this;
     }
 
-    T* get() const noexcept { return ptr_; }
-    T& operator[](size_t i) const { return ptr_[i]; }
-    explicit operator bool() const noexcept { return ptr_ != nullptr; }
+    /* observers */
 
-    int use_count() const noexcept { return ref_count ? int(*ref_count) : 0; }
-    bool unique() const noexcept { return use_count() == 1; }
+    T* get() const noexcept { return ptr; }
+    T& operator*()  const noexcept { return *ptr; }
+    T* operator->() const noexcept { return ptr; }
 
-    void reset(T* ptr = nullptr) noexcept {
-        cleanup();
-        if (!ptr) {
-            ptr_ = nullptr;
-            ref_count = nullptr;
-            weak_count = nullptr;
-        } else {
-            ptr_ = ptr;
-            ref_count = new size_t(1);
-            weak_count = new size_t(0);
+    explicit operator bool() const noexcept { return ptr != nullptr; }
+
+    size_t use_count() const noexcept {
+        return control ? control->strong() : 0;
+    }
+
+    bool unique() const noexcept {
+        return use_count() == 1;
+    }
+
+    /* modifiers */
+
+    void reset(T* p = nullptr) {
+        release();
+        if (p) {
+            ptr = p;
+            control = new ControlBlock(1, 0);
+            enable_shared_from_this(p);
         }
     }
 
     void swap(Shared_Ptr& other) noexcept {
-        std::swap(ptr_, other.ptr_);
-        std::swap(ref_count, other.ref_count);
-        std::swap(weak_count, other.weak_count);
+        std::swap(ptr, other.ptr);
+        std::swap(control, other.control);
     }
 
-    template<typename U> friend class Weak_Ptr;
+    /* friends */
+
+    template<class U> friend class Shared_Ptr;
+    template<class U> friend class Weak_Ptr;
 };
 
 
@@ -331,4 +198,3 @@ namespace my {
     }
 
 }
-

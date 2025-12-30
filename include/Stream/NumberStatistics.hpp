@@ -10,7 +10,7 @@ private:
     bool initialized = false;
 
 public:
-    void consume(T value) {
+    void consume(const T& value) {
         if (!initialized) {
             min_val = max_val = value;
             initialized = true;
@@ -27,7 +27,7 @@ public:
 
     T get_sum() const { return sum; }
 
-    double get_mean() const {
+    double get_mean() const { //медиана
         return count == 0 ? 0.0 : (double)sum / count;
     }
 

@@ -15,7 +15,7 @@ public:
 
 protected:
     
-    ~Enable_Shared_From_This() = default; //виртуальный
+    virtual ~Enable_Shared_From_This() = default; //виртуальный
 
     template<typename U>
     friend class Shared_Ptr;

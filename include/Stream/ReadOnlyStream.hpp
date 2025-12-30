@@ -2,7 +2,6 @@
 
 #include "Sequence.hpp"
 #include "LazySequence.hpp"
-#include "exceptions.hpp"
 #include <exception>
 
 template <typename T>
@@ -11,7 +10,7 @@ public:
     virtual ~Read_Only_Stream() = default;
 
     virtual bool is_end_of_stream() const = 0;
-    virtual bool is_can_seek() const = 0;
+    virtual bool is_can_seek() const = 0; // is_ подряд плохо читаетсяя
     virtual bool seek(size_t index) = 0;
 
     virtual T read() = 0;
@@ -23,7 +22,7 @@ public:
 };
 
 template <typename T>
-class Lazy_Read_Only_Stream : public Read_Only_Stream<T>
+class Lazy_Read_Only_Stream : public Read_Only_Stream<T> //генератор коорый читает поток
 {
 private:
     Shared_Ptr<Lazy_Sequence<T>> lazy_sequence;
