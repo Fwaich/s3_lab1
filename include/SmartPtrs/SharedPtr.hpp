@@ -3,36 +3,7 @@
 #include <utility>
 #include <cstddef>
 #include "EnableSharedFromThis.hpp"
-
-template<class T> class Weak_Ptr;
-
-class ControlBlock {
-public:
-    ControlBlock()
-        : strong_refs(0), weak_refs(0) {}
-
-    ControlBlock(size_t strong, size_t weak)
-        : strong_refs(strong), weak_refs(weak) {}
-
-    ~ControlBlock() = default;
-
-public:
-    size_t strong() const noexcept { return strong_refs; }
-    size_t weak()   const noexcept { return weak_refs; }
-
-    bool has_strong() const noexcept { return strong_refs != 0; }
-    bool has_weak()   const noexcept { return weak_refs != 0; }
-
-    void increase_strong() noexcept { ++strong_refs; }
-    void increase_weak()   noexcept { ++weak_refs;   }
-
-    void decrease_strong() noexcept { --strong_refs; }
-    void decrease_weak()   noexcept { --weak_refs;   }
-
-private:
-    size_t strong_refs;
-    size_t weak_refs;
-};
+#include "ControlBlock.hpp"
 
 template<class T> class Weak_Ptr;
 
@@ -42,10 +13,10 @@ private:
     T* ptr = nullptr;
     ControlBlock* control = nullptr;
 
-private:
+private:// не трогать release()
     void release() noexcept {
         if (!control) return;
-        control->increase_weak();
+        control->increase_weak(); //защита если ptr унаследован от enable_shared_from_this
 
         control->decrease_strong();
 
@@ -55,8 +26,8 @@ private:
 
         }
 
-        control->decrease_weak();
-        if (!control->has_weak()) {
+        control->decrease_weak(); //защита если ptr унаследован от enable_shared_from_this
+        if (!control->has_weak() && !control->has_strong()) {
             delete control;
         }
 
@@ -71,7 +42,6 @@ private:
     }
 
 public:
-    /* constructors */
 
     Shared_Ptr() noexcept = default;
 
@@ -115,13 +85,11 @@ public:
         }
     }
 
-    /* destructor */
 
     ~Shared_Ptr() {
         release();
     }
 
-    /* assignment */
 
     Shared_Ptr& operator=(const Shared_Ptr& other) noexcept {
         if (this != &other) {
@@ -146,7 +114,6 @@ public:
         return *this;
     }
 
-    /* observers */
 
     T* get() const noexcept { return ptr; }
     T& operator*()  const noexcept { return *ptr; }
@@ -162,7 +129,6 @@ public:
         return use_count() == 1;
     }
 
-    /* modifiers */
 
     void reset(T* p = nullptr) {
         release();
@@ -178,7 +144,6 @@ public:
         std::swap(control, other.control);
     }
 
-    /* friends */
 
     template<class U> friend class Shared_Ptr;
     template<class U> friend class Weak_Ptr;

@@ -135,26 +135,29 @@ int main() {
     // auto lazy = Lazy_Sequence<int>::create(seq);
 
     
-    Array_Sequence<int> start;
-    start.append(0);
-    start.append(1);
+    // Array_Sequence<int> start;
+    // start.append(0);
+    // start.append(1);
     
-    auto fib = [](const Array_Sequence<int>& s) {
-        size_t n = s.get_size();
-        return s.get(n - 1) + s.get(n - 2);
-    };
+    // auto fib = [](const Array_Sequence<int>& s) {
+    //     size_t n = s.get_size();
+    //     return s.get(n - 1) + s.get(n - 2);
+    // };
     
-    auto lazy = Lazy_Sequence<int>::create(start, 2, fib);
+    // auto lazy = Lazy_Sequence<int>::create(start, 2, fib);
     
-    int i = 0;
-    while(lazy->has_next() && i < 10) {
-        std::cout << lazy->get(i++) << std::endl;
-    }
-//     struct TestStruct {
-//     int x;
-//     TestStruct(int val) : x(val) {}
-//     int get() const { return x; }
-// };
+    // int i = 0;
+    // while(lazy->has_next() && i < 10) {
+    //     std::cout << lazy->get(i++) << std::endl;
+    // }
+    struct TestStruct {
+    int x;
+    TestStruct(int val) : x(val) {}
+    int get() const { return x; }
+};
+
+Shared_Ptr<TestStruct> p1(new TestStruct(10));
+    Shared_Ptr<TestStruct> p2(p1);
 
 // auto sp = my::make_shared<TestStruct>(88);
 //     Weak_Ptr<TestStruct> wp(sp);

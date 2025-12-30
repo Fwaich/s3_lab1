@@ -1,8 +1,8 @@
 #pragma once
 #include "SharedPtr.hpp"
+#include "ControlBlock.hpp"
 
 template <typename T> class Shared_Ptr;
-class ControlBlock;
 
 template<class T>
 class Weak_Ptr {
@@ -14,7 +14,7 @@ private:
     void release() noexcept {
         if (!control) return;
 
-        control->decrease_weak();
+        if (control->has_weak()) control->decrease_weak();
 
         if (!control->has_strong() && !control->has_weak()) {
             delete control;
@@ -25,7 +25,6 @@ private:
     }
 
 public:
-    /* constructors */
 
     Weak_Ptr() noexcept = default;
 
@@ -52,13 +51,11 @@ public:
         other.control = nullptr;
     }
 
-    /* destructor */
 
     ~Weak_Ptr() {
         release();
     }
 
-    /* assignment */
 
     Weak_Ptr& operator=(const Weak_Ptr& other) noexcept {
         if (this != &other) {
@@ -83,7 +80,6 @@ public:
         return *this;
     }
 
-    /* observers */
 
     bool expired() const noexcept {
         return !control || !control->has_strong();
@@ -93,7 +89,6 @@ public:
         return control ? control->strong() : 0;
     }
 
-    /* modifiers */
 
     Shared_Ptr<T> lock() const noexcept {
         return expired() ? Shared_Ptr<T>() : Shared_Ptr<T>(*this);
@@ -103,13 +98,11 @@ public:
         release();
     }
 
-    /* access */
 
     T* operator->() const noexcept {
         return ptr;
     }
 
-    /* friends */
 
     template<class U> friend class Shared_Ptr;
 };

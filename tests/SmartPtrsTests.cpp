@@ -199,7 +199,7 @@ TEST(WeakPtrTest, Reset) {
     auto sp = my::make_shared<TestStruct>(88);
     Weak_Ptr<TestStruct> wp(sp);
 
-    wp.release();
-    EXPECT_FALSE(wp.expired());
-    EXPECT_TRUE(wp.lock());
+    wp.reset();
+    EXPECT_TRUE(wp.expired());
+    EXPECT_FALSE(wp.lock());
 }
