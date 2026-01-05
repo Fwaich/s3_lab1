@@ -2,180 +2,189 @@
 #include "UniquePtr.hpp"
 #include "SharedPtr.hpp"
 #include "ReadOnlyStream.hpp"
-#include "NumberStatistics.hpp"
+#include "RunningMedian.hpp"
+#include "OperationParser.hpp"
+#include "BinaryTree.hpp"
+#include "LazyInit.hpp"
 #include <iostream>
-
-template <typename T>
-class A : public Enable_Shared_From_This<T>
-{
-private:
-    T  n;
-public:
-
-    A(T num) : n(num) {};
-    
-    static Shared_Ptr<A<T>> create(T num) {
-        return my::make_shared<A<T>>(num);
-    }
-};
+#include <limits>
 
 int main() {
-    // try {
-
-    //     std::cout << "=== LazySequence Stream Number_Statistics ===\n";
-
-    //     Array_Sequence<int> start;
-    //     start.append(0);
-    //     start.append(1);
-
-    //     auto fib = [](const Array_Sequence<int>& seq) -> int {
-    //         size_t n = seq.get_size();
-    //         return seq.get(n - 1) + seq.get(n - 2);
-    //     };
-
-    //     auto lazy = Lazy_Sequence<int>::create(start, 2, fib);
-    //     Lazy_Read_Only_Stream<int> stream(lazy);
-
-    //     Number_Statistics<int> stats;
-
-    //     bool running = true;
-    //     while (running) {
-    //         std::cout << "\nMenu:\n"
-    //                   << "1 - Read next element\n"
-    //                   << "2 - Read N elements\n"
-    //                   << "3 - Apply map (*2)\n"
-    //                   << "4 - Apply filter (even only)\n"
-    //                   << "5 - Print statistics\n"
-    //                   << "6 - Reset stream\n"
-    //                   << "0 - Exit\n"
-    //                   << ">> ";
-
-    //         int choice;
-    //         std::cin >> choice;
-
-    //         switch (choice) {
-    //         case 1: {
-    //             int value = stream.read();
-    //             stats.consume(value);
-    //             std::cout << "Read: " << value << "\n";
-    //             break;
-    //         }
-
-    //         case 2: {
-    //             size_t n;
-    //             std::cout << "How many? ";
-    //             std::cin >> n;
-
-    //             for (size_t i = 0; i < n; ++i) {
-    //                 int value = stream.read();
-    //                 stats.consume(value);
-    //                 std::cout << value << " ";
-    //             }
-    //             std::cout << "\n";
-    //             break;
-    //         }
-
-    //         case 3: {
-    //             lazy = lazy->map<int>([](const int& x) {
-    //                 return x * 2;
-    //             });
-    //             stream = Lazy_Read_Only_Stream<int>(lazy);
-    //             std::cout << "Map (*2) applied\n";
-    //             break;
-    //         }
-
-    //         case 4: {
-    //             lazy = lazy->where([](int x) {
-    //                 return x % 2 == 0;
-    //             });
-    //             stream = Lazy_Read_Only_Stream<int>(lazy);
-    //             std::cout << "Filter (even numbers) applied\n";
-    //             break;
-    //         }
-
-    //         case 5:
-    //             std::cout << "| Count: " << stats.get_count()
-    //               << "\n| Sum: " << stats.get_sum()
-    //               << "\n| Min: " << stats.get_min()
-    //               << "\n| Max: " << stats.get_max()
-    //               << "\n| Mean: " << stats.get_mean()
-    //               << "\n";
-    //             break;
-
-    //         case 6:
-    //             stream.reset();
-    //             std::cout << "Stream reset\n";
-    //             break;
-
-    //         case 0:
-    //             running = false;
-    //             break;
-
-    //         default:
-    //             std::cout << "Invalid option\n";
-    //         }
-    //     }
-
-    //     std::cout << "Goodbye!\n";
-    //     return 0;
-
-    // } catch(const std::out_of_range& e){
-    //     std::cout << e.what() << std::endl; 
-    // }  catch(const std::runtime_error& e){
-    //     std::cout << e.what() << std::endl; 
-    // }
-
-    // auto as = A<int>::create(98);
-
-    // Array_Sequence<int> seq;
-    // seq.append(1);
-    // seq.append(2);
-    // seq.append(3);
-
-    // auto lazy = Lazy_Sequence<int>::create(seq);
-
     
-    // Array_Sequence<int> start;
-    // start.append(0);
-    // start.append(1);
+    auto lazy_seq = init_new_lazy_seq();
+    auto stream = my::make_shared<Lazy_Read_Only_Stream<int>>(lazy_seq);
+    auto lazy_stream = Lazy_Sequence<int>::create(my::make_unique<Stream_Generator<int>>(stream));
+    Running_Median<int> median;
     
-    // auto fib = [](const Array_Sequence<int>& s) {
-    //     size_t n = s.get_size();
-    //     return s.get(n - 1) + s.get(n - 2);
-    // };
+    std::cout << std::endl;
     
-    // auto lazy = Lazy_Sequence<int>::create(start, 2, fib);
+    bool changed = false;
+    size_t current_index = 0;
+    bool running = true;
+    while (running) {
+        try {
+
+            std::cout << "Abilities:\n"
+                      << "1.Append\n"
+                      << "2.Prepend\n"
+                      << "3.Insert At\n"
+                      << "4.Map\n"
+                      << "5.Where\n"
     
-    // int i = 0;
-    // while(lazy->has_next() && i < 10) {
-    //     std::cout << lazy->get(i++) << std::endl;
-    // }
-    struct TestStruct {
-    int x;
-    TestStruct(int val) : x(val) {}
-    int get() const { return x; }
-};
+                      << "6.Read next\n"
+                      << "7.Read next N\n"
+                      << "8.Reset index\n"
+                      << "9.Show statistics\n"
+                      << "0.Exit\n";
+    
+            std::cout << "Your choice: ";
+    
+            int option;
+            std::cin >> option;
+    
+            switch (option) {
+                case 1: {
+                    auto appendable = init_new_lazy_seq();
+                    lazy_stream = lazy_stream->append(appendable);
+                    std::cout << "Succes append\n";
+                    changed = true;
+                    break;
+                }
+    
+                case 2: {
+                    auto prepandable = init_new_lazy_seq();
+                    lazy_stream = lazy_stream->prepend(prepandable);
+                    std::cout << "Succes prepend\n";
+                    changed = true;
+                    break;
+                }
+    
+                case 3: {
+                    std::cout << "Enter Index: ";
+                    int index;
+                    std::cin >> index;
+    
+                    auto insertable = init_new_lazy_seq();
+                    lazy_stream = lazy_stream->insert_at(index, insertable);
+                    std::cout << "Succes insert\n";
+                    changed = true;
+                    break;
+                }
 
-Shared_Ptr<TestStruct> p1(new TestStruct(10));
-    Shared_Ptr<TestStruct> p2(p1);
+                case 4: {
+                    std::cout << "Enter  +,-,/,*  x:\n";
 
-// auto sp = my::make_shared<TestStruct>(88);
-//     Weak_Ptr<TestStruct> wp(sp);
+                    std::string operation;
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    std::getline(std::cin, operation);
 
-//     wp.reset();
+                    auto func = Map_Parser<int>::parse(operation);
+                    lazy_stream = lazy_stream->map(func);
+                }
 
-//     auto sp = my::make_shared<TestStruct>(99);
-//     Weak_Ptr<TestStruct> wp(sp);
+                case 5: {
+                    std::cout << "Enter  >,>=,<,<=,==,!=  x:\n";
+                    std::string operation;
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    std::getline(std::cin, operation);
 
-//     sp.reset();
+                    auto func = Where_Parser<int>::parse(operation);
+                    lazy_stream = lazy_stream->where(func);
+                }
+    
+                case 6: {
+                    std::cout << "Readed:\n";
 
-//     wp.expired();
-//     auto sp2 = wp.lock();
+                    int element = lazy_stream->get(current_index++);
+                    median.add(element);
 
-    // Shared_Ptr<int> a = my::make_shared<int>(23);
-    // Weak_Ptr<int> b = Weak_Ptr<int>(a);
-    // auto ab = b.lock();
-    // std::cout << a.use_count() << std::endl;
-    // std::cout << ab.use_count() << std::endl;
+                    std::cout << "[" << current_index - 1 << "]: ";
+                    std::cout << element << std::endl;
+                    break;
+                }
+    
+                case 7: {
+                    std::cout << "Enter N: ";
+                    int elements_count;
+                    std::cin >> elements_count;
+    
+                    int i = 0;
+                    std::cout << "Readed:\n";
+                    while (lazy_stream->has_next() && i < elements_count) {
+                        int element = lazy_stream->get(current_index++);
+                        median.add(element);
+                        i++;
+
+                        std::cout << "[" << current_index - 1 << "]: ";
+                        std::cout << element << std::endl;
+                    }
+
+                    if (i < elements_count) 
+                        std::cout << "Lazy Sequence have only " << i << " elements\n";
+                    break;
+                }
+
+                case 8:
+                    current_index = 0;
+                    std::cout << "Current index: 0\n";
+                    break;
+
+                case 9: {
+                    if (changed) {
+                        changed = false;
+                        median.clear();
+
+                        int i = 0;
+                        while (lazy_stream->has_next() && i <= current_index) {
+                            median.add(lazy_stream->get(i++));
+                        }
+                    }
+
+                    std::cout << "Median: ";
+                    std::cout << median.get_median() << std::endl;
+                    break;
+                }
+    
+                case 0:
+                    running = false;
+                    break;
+    
+    
+                default:
+                    std::cout << "No such option\n";
+                    break;
+            }
+    
+            std::cout << std::endl;
+
+        } catch (const std::runtime_error& e) {
+            std::cout << e.what() << std::endl;
+        } catch (const std::out_of_range& e) {
+            std::cout << e.what() << std::endl;
+        }
+
+    }
+    
     return 0;
 }
+
+
+
+
+//  int main() {
+//     Running_Median<int> a;
+
+//     a.add(5);
+//     a.add(4);
+//     a.add(3);
+//     a.add(10);
+//     a.add(2);
+    
+
+//     std::cout << "Size:" << std::endl;
+//     std::cout << a.get_median() << std::endl;
+    
+
+
+//     return 0;
+//  }

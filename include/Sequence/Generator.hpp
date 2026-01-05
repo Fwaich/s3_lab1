@@ -1,6 +1,7 @@
 #pragma once
 #include <optional>
 #include "ArraySequence.hpp"
+#include "ReadOnlyStream.hpp"
 #include"UniquePtr.hpp"
 #include"SharedPtr.hpp"
 #include"WeakPtr.hpp"
@@ -77,7 +78,10 @@ public:
     ~Sequence_Generator() {}
 
     T get_next() override {
-        return sequence.get(current_index++);
+        if (this->has_next())
+            return sequence.get(current_index++);
+
+        throw std::runtime_error("Generation limit reached");
     }
 
     bool has_next() override {
@@ -293,3 +297,29 @@ public:
         return false;
     }
 };
+
+
+template <typename T>
+class Stream_Generator : public Generator<T> 
+{
+private:
+    Shared_Ptr<Read_Only_Stream<T>> stream;
+
+public:
+    Stream_Generator(Shared_Ptr<Read_Only_Stream<T>> stream) 
+    {
+        this->stream = stream;
+    }
+    
+    T get_next() override {
+        if (this->has_next())
+            return stream->read();
+        
+        throw std::runtime_error("Generation limit reached");
+    }
+    
+    bool has_next() override {
+        return !stream->is_end_of_stream();
+    }
+};
+

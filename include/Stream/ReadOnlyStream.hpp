@@ -2,7 +2,11 @@
 
 #include "Sequence.hpp"
 #include "LazySequence.hpp"
+#include "SharedPtr.hpp"
 #include <exception>
+
+template <typename T>
+class Lazy_Sequence;
 
 template <typename T>
 class Read_Only_Stream {
@@ -21,6 +25,10 @@ public:
     virtual size_t get_size() const = 0;
 };
 
+
+//сделать генератор в lazy_seq который хранит Unique_Ptr<Read_Only_Stream>
+// в котором будет находиться lazy_Seq
+// и потом обрабатывать как статистику элементы с lazy_seq который создан от такого генератора
 template <typename T>
 class Lazy_Read_Only_Stream : public Read_Only_Stream<T> //генератор коорый читает поток
 {

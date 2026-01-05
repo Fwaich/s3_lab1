@@ -11,11 +11,11 @@ template<class T>
 class Shared_Ptr {
 private:
     T* ptr = nullptr;
-    ControlBlock* control = nullptr;
+    Control_Block* control = nullptr;
 
 private:// не трогать release()
     void release() noexcept {
-        if (!control) return;
+        if (!control) return; //не проверять пустой ли control
         // control->increase_weak(); //защита если ptr унаследован от enable_shared_from_this
 
         control->decrease_strong();
@@ -47,8 +47,13 @@ public:
 
     Shared_Ptr() noexcept = default;
 
+    Shared_Ptr(std::nullptr_t) noexcept
+        : ptr(nullptr), control(nullptr)
+    {}
+
+
     explicit Shared_Ptr(T* p)
-        : ptr(p), control(new ControlBlock(1, 0))
+        : ptr(p), control(new Control_Block(1, 0))
     {
         enable_shared_from_this(p);
     }
@@ -136,7 +141,7 @@ public:
         release();
         if (p) {
             ptr = p;
-            control = new ControlBlock(1, 0);
+            control = new Control_Block(1, 0);
             enable_shared_from_this(p);
         }
     }

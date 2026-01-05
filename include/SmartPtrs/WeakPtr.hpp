@@ -8,13 +8,13 @@ template<class T>
 class Weak_Ptr {
 private:
     T* ptr = nullptr;
-    ControlBlock* control = nullptr;
+    Control_Block* control = nullptr;
 
 private:
     void release() noexcept {
         if (!control) return;
 
-        if (control->has_weak()) control->decrease_weak();
+        if (control->has_weak()) control->decrease_weak(); //всегда выполняется (еще подумать)
 
         if (!control->has_strong() && !control->has_weak()) {
             delete control;
@@ -100,7 +100,8 @@ public:
 
 
     T* operator->() const noexcept {
-        return ptr;
+        return ptr; //нужно проверять есть ли ptr
+        //может возаращать option
     }
 
 
