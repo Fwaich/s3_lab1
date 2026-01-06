@@ -6,9 +6,6 @@ private:
     size_t weak_refs;
 
 public:
-    // Control_Block()
-    //     : strong_refs(0), weak_refs(0) {}
-
     Control_Block(size_t strong, size_t weak)
         : strong_refs(strong), weak_refs(weak) {}
 

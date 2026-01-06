@@ -13,10 +13,9 @@ private:
     T* ptr = nullptr;
     Control_Block* control = nullptr;
 
-private:// не трогать release()
+private:
     void release() noexcept {
-        if (!control) return; //не проверять пустой ли control
-        // control->increase_weak(); //защита если ptr унаследован от enable_shared_from_this
+        if (!control) return;
 
         control->decrease_strong();
         bool no_strong = !control->has_strong();
@@ -24,22 +23,23 @@ private:// не трогать release()
 
         if (no_strong) {
             delete ptr;
-            ptr = nullptr;
-
+            
+            if (no_strong && no_weak) {
+                delete control;
+            }           
         }
-
-        // control->decrease_weak(); //защита если ptr унаследован от enable_shared_from_this
-        if (no_strong && no_weak) {
-            delete control;
-        }
-
+        ptr = nullptr;
         control = nullptr;
     }
 
     template<typename U>
     void enable_shared_from_this(U* p) noexcept {
         if constexpr (std::is_base_of_v<Enable_Shared_From_This<U>, U>) {
-            p->weak_this = *this;
+            if (!p->weak_this.control) {
+                p->weak_this.ptr = p;
+                p->weak_this.control = control;
+                control->increase_weak();
+            }
         }
     }
 
@@ -47,16 +47,15 @@ public:
 
     Shared_Ptr() noexcept = default;
 
-    Shared_Ptr(std::nullptr_t) noexcept
-        : ptr(nullptr), control(nullptr)
-    {}
-
-
     explicit Shared_Ptr(T* p)
-        : ptr(p), control(new Control_Block(1, 0))
+        : ptr(p), control(nullptr)
     {
-        enable_shared_from_this(p);
+        if (p) {
+            control = new Control_Block(1, 0);
+            enable_shared_from_this(p);
+        }
     }
+
 
     Shared_Ptr(const Shared_Ptr& other) noexcept
         : ptr(other.ptr), control(other.control)
@@ -87,8 +86,11 @@ public:
     explicit Shared_Ptr(const Weak_Ptr<T>& weak) noexcept
         : ptr(weak.ptr), control(weak.control)
     {
-        if (control) {
+        if (control && control->has_strong()) {
             control->increase_strong();
+        } else {
+            ptr = nullptr;
+            control = nullptr;
         }
     }
 
@@ -122,8 +124,8 @@ public:
     }
 
 
+    T& operator*()  const noexcept { return *ptr; } //без проверки как в сырых указателях
     T* get() const noexcept { return ptr; }
-    T& operator*()  const noexcept { return *ptr; }
     T* operator->() const noexcept { return ptr; }
 
     explicit operator bool() const noexcept { return ptr != nullptr; }
@@ -162,11 +164,6 @@ namespace my {
     template<typename T, typename... Args>
     Shared_Ptr<T> make_shared(Args&&... args) {
         return Shared_Ptr<T>(new T(std::forward<Args>(args)...));
-    }
-    
-    template<typename T>
-    Shared_Ptr<T[]> make_shared(size_t size) {
-        return Shared_Ptr<T[]>(new T[size]);
     }
 
 }

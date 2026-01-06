@@ -22,13 +22,13 @@ template <typename T>
 class Function_Generator : public Generator<T>
 {
 private: 
-    Weak_Ptr<Lazy_Sequence<T>> owner; 
+    Weak_Ptr<Lazy_Sequence<T>> generator_owner; 
     std::function<T(const Sequence<T>&)> rule;
     size_t arity;
 
 public:
     Function_Generator(Shared_Ptr<Lazy_Sequence<T>> gen_owner, size_t arity, std::function<T(const Sequence<T>&)> rule) 
-        : owner(gen_owner)
+        : generator_owner(gen_owner)
     {
         this->arity = arity;
         this->rule = rule;
@@ -37,6 +37,7 @@ public:
     ~Function_Generator() {}
 
     T get_next() override {
+        auto owner = generator_owner.lock();
         if (owner->get_materialized_count() <  arity)
             throw std::runtime_error("Not enough elements to generate next");
 
@@ -50,6 +51,7 @@ public:
     }
 
     bool has_next() {
+        auto owner = generator_owner.lock();
         return owner->get_materialized_count() >= arity;
     }
 

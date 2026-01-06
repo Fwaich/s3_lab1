@@ -6,6 +6,7 @@
 #include "OperationParser.hpp"
 #include "BinaryTree.hpp"
 #include "LazyInit.hpp"
+#include "IntegerInput.hpp"
 #include <iostream>
 #include <limits>
 
@@ -37,11 +38,8 @@ int main() {
                       << "9.Show statistics\n"
                       << "0.Exit\n";
     
-            std::cout << "Your choice: ";
-    
-            int option;
-            std::cin >> option;
-    
+            int option = get_integer_input("Your choice: ");
+            
             switch (option) {
                 case 1: {
                     auto appendable = init_new_lazy_seq();
@@ -60,9 +58,7 @@ int main() {
                 }
     
                 case 3: {
-                    std::cout << "Enter Index: ";
-                    int index;
-                    std::cin >> index;
+                    int index = get_integer_input("Enter index: ");
     
                     auto insertable = init_new_lazy_seq();
                     lazy_stream = lazy_stream->insert_at(index, insertable);
@@ -75,21 +71,23 @@ int main() {
                     std::cout << "Enter  +,-,/,*  x:\n";
 
                     std::string operation;
-                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                     std::getline(std::cin, operation);
 
                     auto func = Map_Parser<int>::parse(operation);
                     lazy_stream = lazy_stream->map(func);
+                    changed = true;
+                    break;
                 }
 
                 case 5: {
                     std::cout << "Enter  >,>=,<,<=,==,!=  x:\n";
                     std::string operation;
-                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                     std::getline(std::cin, operation);
 
                     auto func = Where_Parser<int>::parse(operation);
                     lazy_stream = lazy_stream->where(func);
+                    changed = true;
+                    break;
                 }
     
                 case 6: {
@@ -104,9 +102,7 @@ int main() {
                 }
     
                 case 7: {
-                    std::cout << "Enter N: ";
-                    int elements_count;
-                    std::cin >> elements_count;
+                    int elements_count = get_integer_input("Enter N: ");
     
                     int i = 0;
                     std::cout << "Readed:\n";
@@ -155,13 +151,16 @@ int main() {
                     break;
             }
     
-            std::cout << std::endl;
-
+            
         } catch (const std::runtime_error& e) {
             std::cout << e.what() << std::endl;
         } catch (const std::out_of_range& e) {
             std::cout << e.what() << std::endl;
+        } catch (const std::invalid_argument& e) {
+            std::cout << e.what() << std::endl;
         }
+        
+        std::cout << std::endl;
 
     }
     
@@ -172,17 +171,16 @@ int main() {
 
 
 //  int main() {
-//     Running_Median<int> a;
+//     Array_Sequence<int> start;
+//     start.append(0);
+//     start.append(1);
 
-//     a.add(5);
-//     a.add(4);
-//     a.add(3);
-//     a.add(10);
-//     a.add(2);
-    
+//     auto fib = [](const Sequence<int>& seq) -> int {
+//                     size_t size = seq.get_size();
+//                     return seq.get(size - 1) + seq.get(size - 2);
+//                 };
 
-//     std::cout << "Size:" << std::endl;
-//     std::cout << a.get_median() << std::endl;
+//     auto ls = Lazy_Sequence<int>::create(start, 2, fib);
     
 
 

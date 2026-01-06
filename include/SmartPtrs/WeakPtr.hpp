@@ -14,7 +14,7 @@ private:
     void release() noexcept {
         if (!control) return;
 
-        if (control->has_weak()) control->decrease_weak(); //всегда выполняется (еще подумать)
+        control->decrease_weak();
 
         if (!control->has_strong() && !control->has_weak()) {
             delete control;
@@ -80,6 +80,11 @@ public:
         return *this;
     }
 
+    explicit operator bool() const noexcept {
+        return ptr != nullptr && control && control->has_strong();
+    }
+
+
 
     bool expired() const noexcept {
         return !control || !control->has_strong();
@@ -97,13 +102,6 @@ public:
     void reset() noexcept {
         release();
     }
-
-
-    T* operator->() const noexcept {
-        return ptr; //нужно проверять есть ли ptr
-        //может возаращать option
-    }
-
 
     template<class U> friend class Shared_Ptr;
 };

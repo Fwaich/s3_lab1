@@ -6,6 +6,8 @@
 #include "Traversal.hpp"
 #include "TreeIterator.hpp"
 
+//со 2го семестра
+
 template<typename T>
 class TreeTraversal;
 

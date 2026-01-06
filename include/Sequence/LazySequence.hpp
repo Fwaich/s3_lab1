@@ -24,6 +24,9 @@ private:
    
 public:
 
+    Lazy_Sequence()
+        : materialized_data(my::make_unique<Array_Sequence<T>>()) {}
+
     Lazy_Sequence(const Sequence<T>& start_sequence, size_t arity, std::function<T(const Sequence<T>&)> rule)
         : materialized_data(my::make_unique<Array_Sequence<T>>(start_sequence)) {}
 
@@ -39,6 +42,13 @@ public:
         this->generator = std::move(gen);
     }
     
+    static Shared_Ptr<Lazy_Sequence<T>> create() 
+    {
+        return Shared_Ptr<Lazy_Sequence<T>>(
+            new Lazy_Sequence<T>()
+        );
+    }
+
     static Shared_Ptr<Lazy_Sequence<T>> create(const Sequence<T>&  start_sequence,
          size_t arity, std::function<T(const Array_Sequence<T>&)> rule) 
     {

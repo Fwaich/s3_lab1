@@ -29,6 +29,7 @@ include_directories(
 add_library(${PROJECT_NAME}_lib
     src/exceptions.cpp
     src/LazyInit.cpp
+    src/IntegerInput.cpp
 )
 
 add_executable(${PROJECT_NAME}
